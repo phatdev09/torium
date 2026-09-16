@@ -82,9 +82,19 @@ public final class CraneManager {
 
     /// Launches Torium inside the specified Crane container via Crane CLI or URL scheme
     public func launchContainer(containerId: String) {
-        // Method 1: Using Crane command line tool `crane launch <bundleId> <containerId>`
+        // Method 1: Using Crane command line tool `crane launch <bundleId> <containerId>` via posix_spawn
         let cmd = "crane launch \(CraneManager.toriumBundleId) \(containerId)"
-        system(cmd)
+        var pid: pid_t = 0
+        let args: [UnsafeMutablePointer<CChar>?] = [
+            strdup("/bin/sh"),
+            strdup("-c"),
+            strdup(cmd),
+            nil
+        ]
+        posix_spawn(&pid, "/bin/sh", nil, nil, args, nil)
+        var status: Int32 = 0
+        waitpid(pid, &status, 0)
+        for ptr in args { if let p = ptr { free(p) } }
 
         // Method 2: Fallback via Crane URL Scheme `crane://launch?bundle=...&container=...`
         if let url = URL(string: "crane://launch?bundle=\(CraneManager.toriumBundleId)&container=\(containerId)") {

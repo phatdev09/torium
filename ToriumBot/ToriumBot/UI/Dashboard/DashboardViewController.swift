@@ -188,7 +188,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
         activeAccountsCard.setValue("\(summary.totalActive)")
         torTodayCard.setValue(String(format: "%.2f", summary.totalTor))
-        adsWatchedCard.setValue("\(summary.totalAds)")
+        adsWatchedCard.setValue("\(summary.totalAdsWatched)")
         errorAccountsCard.setValue("\(summary.errorAccounts)")
 
         var newStatsMap: [Int64: MiningStats] = [:]
