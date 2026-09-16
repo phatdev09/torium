@@ -1,0 +1,309 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2001 /* AppDelegate.swift */; };
+		1002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2002 /* SceneDelegate.swift */; };
+		1003 /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2003 /* DatabaseManager.swift */; };
+		1004 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2004 /* Account.swift */; };
+		1005 /* MiningStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2005 /* MiningStats.swift */; };
+		1006 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2006 /* Log.swift */; };
+		1007 /* ToriumAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2007 /* ToriumAPIClient.swift */; };
+		1008 /* ProxyURLSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2008 /* ProxyURLSession.swift */; };
+		1009 /* DongVanFBClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009 /* DongVanFBClient.swift */; };
+		1010 /* MiningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010 /* MiningEngine.swift */; };
+		1011 /* AdWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011 /* AdWatcher.swift */; };
+		1012 /* CheckInManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2012 /* CheckInManager.swift */; };
+		1013 /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2013 /* Scheduler.swift */; };
+		1014 /* TokenExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2014 /* TokenExtractor.swift */; };
+		1015 /* AccountRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2015 /* AccountRegistrar.swift */; };
+		1016 /* CraneManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2016 /* CraneManager.swift */; };
+		1017 /* ProxyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2017 /* ProxyManager.swift */; };
+		1018 /* TelegramReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018 /* TelegramReporter.swift */; };
+		1019 /* BackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2019 /* BackupManager.swift */; };
+		1020 /* WatchdogDaemon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2020 /* WatchdogDaemon.swift */; };
+		1021 /* ToriumTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2021 /* ToriumTheme.swift */; };
+		1022 /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022 /* MainTabBarController.swift */; };
+		1023 /* DashboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2023 /* DashboardViewController.swift */; };
+		1024 /* AccountSummaryCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2024 /* AccountSummaryCell.swift */; };
+		1025 /* AccountsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* AccountsViewController.swift */; };
+		1026 /* AccountDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* AccountDetailViewController.swift */; };
+		1027 /* AddAccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* AddAccountViewController.swift */; };
+		1028 /* ImportAccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* ImportAccountViewController.swift */; };
+		1029 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* SettingsViewController.swift */; };
+		1030 /* LogsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* LogsViewController.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0001 /* ToriumBot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToriumBot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		2002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		2003 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
+		2004 /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
+		2005 /* MiningStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiningStats.swift; sourceTree = "<group>"; };
+		2006 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		2007 /* ToriumAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumAPIClient.swift; sourceTree = "<group>"; };
+		2008 /* ProxyURLSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyURLSession.swift; sourceTree = "<group>"; };
+		2009 /* DongVanFBClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DongVanFBClient.swift; sourceTree = "<group>"; };
+		2010 /* MiningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiningEngine.swift; sourceTree = "<group>"; };
+		2011 /* AdWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdWatcher.swift; sourceTree = "<group>"; };
+		2012 /* CheckInManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInManager.swift; sourceTree = "<group>"; };
+		2013 /* Scheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
+		2014 /* TokenExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenExtractor.swift; sourceTree = "<group>"; };
+		2015 /* AccountRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRegistrar.swift; sourceTree = "<group>"; };
+		2016 /* CraneManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CraneManager.swift; sourceTree = "<group>"; };
+		2017 /* ProxyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyManager.swift; sourceTree = "<group>"; };
+		2018 /* TelegramReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelegramReporter.swift; sourceTree = "<group>"; };
+		2019 /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
+		2020 /* WatchdogDaemon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchdogDaemon.swift; sourceTree = "<group>"; };
+		2021 /* ToriumTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumTheme.swift; sourceTree = "<group>"; };
+		2022 /* MainTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
+		2023 /* DashboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewController.swift; sourceTree = "<group>"; };
+		2024 /* AccountSummaryCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSummaryCell.swift; sourceTree = "<group>"; };
+		2025 /* AccountsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsViewController.swift; sourceTree = "<group>"; };
+		2026 /* AccountDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailViewController.swift; sourceTree = "<group>"; };
+		2027 /* AddAccountViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddAccountViewController.swift; sourceTree = "<group>"; };
+		2028 /* ImportAccountViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportAccountViewController.swift; sourceTree = "<group>"; };
+		2029 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
+		2030 /* LogsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogsViewController.swift; sourceTree = "<group>"; };
+		2031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2032 /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Entitlements.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		9001 = {
+			isa = PBXGroup;
+			children = (
+				9002 /* ToriumBot */,
+				9003 /* Resources */,
+				0001 /* ToriumBot.app */,
+			);
+			sourceTree = "<group>";
+		};
+		9002 /* ToriumBot */ = {
+			isa = PBXGroup;
+			children = (
+				2001 /* AppDelegate.swift */,
+				2002 /* SceneDelegate.swift */,
+				2021 /* ToriumTheme.swift */,
+				2022 /* MainTabBarController.swift */,
+				2003 /* DatabaseManager.swift */,
+				2004 /* Account.swift */,
+				2005 /* MiningStats.swift */,
+				2006 /* Log.swift */,
+				2007 /* ToriumAPIClient.swift */,
+				2008 /* ProxyURLSession.swift */,
+				2009 /* DongVanFBClient.swift */,
+				2010 /* MiningEngine.swift */,
+				2011 /* AdWatcher.swift */,
+				2012 /* CheckInManager.swift */,
+				2013 /* Scheduler.swift */,
+				2014 /* TokenExtractor.swift */,
+				2015 /* AccountRegistrar.swift */,
+				2016 /* CraneManager.swift */,
+				2017 /* ProxyManager.swift */,
+				2018 /* TelegramReporter.swift */,
+				2019 /* BackupManager.swift */,
+				2020 /* WatchdogDaemon.swift */,
+				2023 /* DashboardViewController.swift */,
+				2024 /* AccountSummaryCell.swift */,
+				2025 /* AccountsViewController.swift */,
+				2026 /* AccountDetailViewController.swift */,
+				2027 /* AddAccountViewController.swift */,
+				2028 /* ImportAccountViewController.swift */,
+				2029 /* SettingsViewController.swift */,
+				2030 /* LogsViewController.swift */,
+			);
+			name = ToriumBot;
+			sourceTree = "<group>";
+		};
+		9003 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2031 /* Info.plist */,
+				2032 /* Entitlements.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3001 /* ToriumBot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4001 /* Build configuration list for PBXNativeTarget "ToriumBot" */;
+			buildPhases = (
+				5001 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ToriumBot;
+			productName = ToriumBot;
+			productReference = 0001 /* ToriumBot.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = 4000 /* Build configuration list for PBXProject "ToriumBot" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9001;
+			productRefGroup = 9001;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3001 /* ToriumBot */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1001 /* AppDelegate.swift in Sources */,
+				1002 /* SceneDelegate.swift in Sources */,
+				1003 /* DatabaseManager.swift in Sources */,
+				1004 /* Account.swift in Sources */,
+				1005 /* MiningStats.swift in Sources */,
+				1006 /* Log.swift in Sources */,
+				1007 /* ToriumAPIClient.swift in Sources */,
+				1008 /* ProxyURLSession.swift in Sources */,
+				1009 /* DongVanFBClient.swift in Sources */,
+				1010 /* MiningEngine.swift in Sources */,
+				1011 /* AdWatcher.swift in Sources */,
+				1012 /* CheckInManager.swift in Sources */,
+				1013 /* Scheduler.swift in Sources */,
+				1014 /* TokenExtractor.swift in Sources */,
+				1015 /* AccountRegistrar.swift in Sources */,
+				1016 /* CraneManager.swift in Sources */,
+				1017 /* ProxyManager.swift in Sources */,
+				1018 /* TelegramReporter.swift in Sources */,
+				1019 /* BackupManager.swift in Sources */,
+				1020 /* WatchdogDaemon.swift in Sources */,
+				1021 /* ToriumTheme.swift in Sources */,
+				1022 /* MainTabBarController.swift in Sources */,
+				1023 /* DashboardViewController.swift in Sources */,
+				1024 /* AccountSummaryCell.swift in Sources */,
+				1025 /* AccountsViewController.swift in Sources */,
+				1026 /* AccountDetailViewController.swift in Sources */,
+				1027 /* AddAccountViewController.swift in Sources */,
+				1028 /* ImportAccountViewController.swift in Sources */,
+				1029 /* SettingsViewController.swift in Sources */,
+				1030 /* LogsViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toriumbot.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1";
+				INFOPLIST_FILE = "Resources/Info.plist";
+				CODE_SIGN_ENTITLEMENTS = "Resources/Entitlements.plist";
+			};
+			name = Debug;
+		};
+		4003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.toriumbot.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1";
+				INFOPLIST_FILE = "Resources/Info.plist";
+				CODE_SIGN_ENTITLEMENTS = "Resources/Entitlements.plist";
+			};
+			name = Release;
+		};
+		4004 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos";
+			};
+			name = Debug;
+		};
+		4005 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4000 /* Build configuration list for PBXProject "ToriumBot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4004 /* Debug */,
+				4005 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4001 /* Build configuration list for PBXNativeTarget "ToriumBot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4002 /* Debug */,
+				4003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 0000 /* Project object */;
+}
