@@ -1,0 +1,7 @@
+{
+    Filter = {
+        Bundles = (
+            "network.torium.app"
+        );
+    };
+}

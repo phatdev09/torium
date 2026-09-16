@@ -23,11 +23,9 @@ let package = Package(
             ],
             path: "ToriumBot",
             exclude: [
-                "../Daemon",
-                "../Resources"
-            ],
-            resources: [
-                .process("../Resources")
+                "Tweak",
+                "Core/Container/CraneBridge.h",
+                "Core/Container/CraneBridge.m"
             ]
         )
     ]

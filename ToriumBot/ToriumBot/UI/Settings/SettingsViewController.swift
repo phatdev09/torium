@@ -1,10 +1,16 @@
 import UIKit
 
-/// Settings Tab providing configuration for Telegram, Automation schedules, Backup, and About
+/// Settings Tab providing configuration for Telegram, Automation, Referral, Sleep Simulator, Tweak & OTA
 public final class SettingsViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDelegate {
 
     private let scrollView = UIScrollView()
     private let contentView = UIView()
+
+    // Referral & Anti-Sybil Section
+    private let referralCard = UIView()
+    private let masterRefField = UITextField()
+    private let sleepSimulatorSwitch = UISwitch()
+    private let sleepHoursLabel = UILabel()
 
     // Telegram Section
     private let telegramCard = UIView()
@@ -14,19 +20,17 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
     private let intervalPicker = UIPickerView()
     private let intervalOptions = ["1", "3", "6", "12", "24"]
 
-    // Automation Section
+    // Automation & Versions Section
     private let automationCard = UIView()
     private let adIntervalField = UITextField()
     private let humanDelaySwitch = UISwitch()
-    private let autoRestartSwitch = UISwitch()
+    private let otaVersionField = UITextField()
+    private let appVersionField = UITextField()
 
-    // Backup Section
-    private let backupCard = UIView()
+    // Tweak & Backup Section
+    private let tweakCard = UIView()
+    private let installTweakButton = UIButton(type: .system)
     private let backupAllButton = UIButton(type: .system)
-
-    // About Section
-    private let aboutCard = UIView()
-    private let versionLabel = UILabel()
 
     public override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,10 +39,10 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Lưu", style: .done, target: self, action: #selector(saveSettings))
 
         setupScrollView()
-        setupTelegramSection()
+        setupReferralSection()
         setupAutomationSection()
-        setupBackupSection()
-        setupAboutSection()
+        setupTelegramSection()
+        setupTweakSection()
         loadSettings()
     }
 
@@ -62,54 +66,42 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         ])
     }
 
-    private func setupTelegramSection() {
-        ToriumTheme.applyCardStyle(to: telegramCard)
-        telegramCard.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(telegramCard)
+    private func setupReferralSection() {
+        ToriumTheme.applyCardStyle(to: referralCard)
+        referralCard.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(referralCard)
 
-        let sectionTitle = makeSectionTitle("TELEGRAM NOTIFICATIONS")
-        styleTextField(botTokenField, placeholder: "Telegram Bot Token")
-        styleTextField(chatIdField, placeholder: "Telegram Chat ID")
+        let sectionTitle = makeSectionTitle("MÃ GIỚI THIỆU & MÔ PHỎNG GIẤC NGỦ")
+        styleTextField(masterRefField, placeholder: "Master Referral Code (Ví dụ: TORIUMVIP)")
 
-        testTelegramButton.setTitle("Test Kết Nối Telegram", for: .normal)
-        testTelegramButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
-        testTelegramButton.layer.borderWidth = 1
-        testTelegramButton.layer.borderColor = ToriumTheme.accentGold.cgColor
-        testTelegramButton.layer.cornerRadius = 8
-        testTelegramButton.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        testTelegramButton.addTarget(self, action: #selector(handleTestTelegram), for: .touchUpInside)
+        let sleepRow = UIStackView()
+        sleepRow.axis = .horizontal
+        sleepRow.alignment = .center
 
-        let intervalLabel = UILabel()
-        intervalLabel.text = "Chu kỳ báo cáo định kỳ:"
-        intervalLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
-        intervalLabel.textColor = ToriumTheme.textSecondary
+        let sleepLabel = UILabel()
+        sleepLabel.text = "Mô Phỏng Giấc Ngủ (Nghỉ 01:30 - 05:30):"
+        sleepLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        sleepLabel.textColor = ToriumTheme.textPrimary
+        sleepLabel.numberOfLines = 2
 
-        intervalPicker.dataSource = self
-        intervalPicker.delegate = self
-        intervalPicker.heightAnchor.constraint(equalToConstant: 80).isActive = true
+        sleepRow.addArrangedSubview(sleepLabel)
+        sleepRow.addArrangedSubview(sleepSimulatorSwitch)
 
-        let stack = UIStackView(arrangedSubviews: [
-            sectionTitle,
-            botTokenField,
-            chatIdField,
-            testTelegramButton,
-            intervalLabel,
-            intervalPicker
-        ])
+        let stack = UIStackView(arrangedSubviews: [sectionTitle, masterRefField, sleepRow])
         stack.axis = .vertical
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
-        telegramCard.addSubview(stack)
+        referralCard.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            telegramCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            telegramCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            telegramCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            referralCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            referralCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            referralCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
-            stack.topAnchor.constraint(equalTo: telegramCard.topAnchor, constant: 14),
-            stack.leadingAnchor.constraint(equalTo: telegramCard.leadingAnchor, constant: 14),
-            stack.trailingAnchor.constraint(equalTo: telegramCard.trailingAnchor, constant: -14),
-            stack.bottomAnchor.constraint(equalTo: telegramCard.bottomAnchor, constant: -14)
+            stack.topAnchor.constraint(equalTo: referralCard.topAnchor, constant: 14),
+            stack.leadingAnchor.constraint(equalTo: referralCard.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: referralCard.trailingAnchor, constant: -14),
+            stack.bottomAnchor.constraint(equalTo: referralCard.bottomAnchor, constant: -14)
         ])
     }
 
@@ -118,33 +110,30 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         automationCard.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(automationCard)
 
-        let sectionTitle = makeSectionTitle("AUTOMATION SETTINGS")
+        let sectionTitle = makeSectionTitle("TỰ ĐỘNG HÓA & CẬP NHẬT PHIÊN BẢN OTA")
+        styleTextField(adIntervalField, placeholder: "Khoảng cách xem ad (mặc định 2 giờ)")
+        adIntervalField.keyboardType = .numberPad
 
-        let intervalLabel = UILabel()
-        intervalLabel.text = "Khoảng cách xem Ad mặc định (giờ):"
-        intervalLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
-        intervalLabel.textColor = ToriumTheme.textSecondary
+        styleTextField(otaVersionField, placeholder: "Live x-ota-version")
+        styleTextField(appVersionField, placeholder: "Live x-app-version (2.1.0)")
 
-        styleTextField(adIntervalField, placeholder: "2")
-        adIntervalField.keyboardType = .decimalPad
+        let delayRow = UIStackView()
+        delayRow.axis = .horizontal
+        let delayLabel = UILabel()
+        delayLabel.text = "Human Delay (Giãn cách ngẫu nhiên):"
+        delayLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        delayLabel.textColor = ToriumTheme.textPrimary
+        delayRow.addArrangedSubview(delayLabel)
+        delayRow.addArrangedSubview(humanDelaySwitch)
 
-        let humanDelayRow = makeSwitchRow(title: "Human Delay (delay ngẫu nhiên chống phát hiện)", toggleSwitch: humanDelaySwitch)
-        let autoRestartRow = makeSwitchRow(title: "Auto Restart on Error (tự khởi động lại khi lỗi)", toggleSwitch: autoRestartSwitch)
-
-        let stack = UIStackView(arrangedSubviews: [
-            sectionTitle,
-            intervalLabel,
-            adIntervalField,
-            humanDelayRow,
-            autoRestartRow
-        ])
+        let stack = UIStackView(arrangedSubviews: [sectionTitle, adIntervalField, delayRow, otaVersionField, appVersionField])
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
         automationCard.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            automationCard.topAnchor.constraint(equalTo: telegramCard.bottomAnchor, constant: 14),
+            automationCard.topAnchor.constraint(equalTo: referralCard.bottomAnchor, constant: 12),
             automationCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             automationCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
@@ -155,140 +144,172 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         ])
     }
 
-    private func setupBackupSection() {
-        ToriumTheme.applyCardStyle(to: backupCard)
-        backupCard.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(backupCard)
+    private func setupTelegramSection() {
+        ToriumTheme.applyCardStyle(to: telegramCard)
+        telegramCard.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(telegramCard)
 
-        let sectionTitle = makeSectionTitle("DỮ LIỆU & BACKUP")
+        let sectionTitle = makeSectionTitle("TELEGRAM NOTIFICATIONS (SEND-ONLY)")
+        styleTextField(botTokenField, placeholder: "Telegram Bot Token")
+        styleTextField(chatIdField, placeholder: "Telegram Chat ID")
 
-        backupAllButton.setTitle("Backup Tất Cả Accounts (Gửi qua Telegram)", for: .normal)
-        backupAllButton.setTitleColor(UIColor.black, for: .normal)
-        backupAllButton.backgroundColor = ToriumTheme.accentGold
-        backupAllButton.layer.cornerRadius = ToriumTheme.cornerRadius
-        backupAllButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        backupAllButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        backupAllButton.addTarget(self, action: #selector(handleBackupAll), for: .touchUpInside)
+        testTelegramButton.setTitle("Test Kết Nối Telegram", for: .normal)
+        testTelegramButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
+        testTelegramButton.layer.borderWidth = 1
+        testTelegramButton.layer.borderColor = ToriumTheme.accentGold.cgColor
+        testTelegramButton.layer.cornerRadius = 8
+        testTelegramButton.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        testTelegramButton.addTarget(self, action: #selector(handleTestTelegram), for: .touchUpInside)
 
-        let descLabel = UILabel()
-        descLabel.text = "Xuất định dạng: email|password|bearer_token|clerk_id|device_id|proxy"
-        descLabel.font = UIFont.systemFont(ofSize: 11, weight: .regular)
-        descLabel.textColor = ToriumTheme.textMuted
-        descLabel.numberOfLines = 0
+        let intervalLabel = UILabel()
+        intervalLabel.text = "Chu kỳ báo cáo định kỳ (Giờ):"
+        intervalLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        intervalLabel.textColor = ToriumTheme.textSecondary
 
-        let stack = UIStackView(arrangedSubviews: [sectionTitle, backupAllButton, descLabel])
+        intervalPicker.dataSource = self
+        intervalPicker.delegate = self
+        intervalPicker.heightAnchor.constraint(equalToConstant: 70).isActive = true
+
+        let stack = UIStackView(arrangedSubviews: [sectionTitle, botTokenField, chatIdField, testTelegramButton, intervalLabel, intervalPicker])
         stack.axis = .vertical
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
-        backupCard.addSubview(stack)
+        telegramCard.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            backupCard.topAnchor.constraint(equalTo: automationCard.bottomAnchor, constant: 14),
-            backupCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            backupCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            telegramCard.topAnchor.constraint(equalTo: automationCard.bottomAnchor, constant: 12),
+            telegramCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            telegramCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
-            stack.topAnchor.constraint(equalTo: backupCard.topAnchor, constant: 14),
-            stack.leadingAnchor.constraint(equalTo: backupCard.leadingAnchor, constant: 14),
-            stack.trailingAnchor.constraint(equalTo: backupCard.trailingAnchor, constant: -14),
-            stack.bottomAnchor.constraint(equalTo: backupCard.bottomAnchor, constant: -14)
+            stack.topAnchor.constraint(equalTo: telegramCard.topAnchor, constant: 14),
+            stack.leadingAnchor.constraint(equalTo: telegramCard.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: telegramCard.trailingAnchor, constant: -14),
+            stack.bottomAnchor.constraint(equalTo: telegramCard.bottomAnchor, constant: -14)
         ])
     }
 
-    private func setupAboutSection() {
-        ToriumTheme.applyCardStyle(to: aboutCard)
-        aboutCard.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(aboutCard)
+    private func setupTweakSection() {
+        ToriumTheme.applyCardStyle(to: tweakCard)
+        tweakCard.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(tweakCard)
 
-        let sectionTitle = makeSectionTitle("ABOUT")
-        versionLabel.text = """
-        ToriumBot Native v1.0.0
-        Rootful Jailbreak & TrollStore Edition
-        A9 / iPhone 6s / 6s Plus Support
-        """
-        versionLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
-        versionLabel.textColor = ToriumTheme.textSecondary
-        versionLabel.numberOfLines = 0
+        let sectionTitle = makeSectionTitle("TWEAK HỖ TRỢ & SAO LƯU")
 
-        let stack = UIStackView(arrangedSubviews: [sectionTitle, versionLabel])
+        installTweakButton.setTitle("⚡ Cài Đặt ToriumHelper Tweak (1 chạm)", for: .normal)
+        installTweakButton.backgroundColor = ToriumTheme.accentGold.withAlphaComponent(0.2)
+        installTweakButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
+        installTweakButton.layer.cornerRadius = 8
+        installTweakButton.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        installTweakButton.addTarget(self, action: #selector(handleInstallTweak), for: .touchUpInside)
+
+        backupAllButton.setTitle("📥 Backup Tất Cả Accounts (Gửi qua Telegram)", for: .normal)
+        backupAllButton.backgroundColor = ToriumTheme.success.withAlphaComponent(0.2)
+        backupAllButton.setTitleColor(ToriumTheme.success, for: .normal)
+        backupAllButton.layer.cornerRadius = 8
+        backupAllButton.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        backupAllButton.addTarget(self, action: #selector(handleBackupAll), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [sectionTitle, installTweakButton, backupAllButton])
         stack.axis = .vertical
-        stack.spacing = 8
+        stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
-        aboutCard.addSubview(stack)
+        tweakCard.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            aboutCard.topAnchor.constraint(equalTo: backupCard.bottomAnchor, constant: 14),
-            aboutCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            aboutCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            aboutCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+            tweakCard.topAnchor.constraint(equalTo: telegramCard.bottomAnchor, constant: 12),
+            tweakCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            tweakCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            tweakCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
 
-            stack.topAnchor.constraint(equalTo: aboutCard.topAnchor, constant: 14),
-            stack.leadingAnchor.constraint(equalTo: aboutCard.leadingAnchor, constant: 14),
-            stack.trailingAnchor.constraint(equalTo: aboutCard.trailingAnchor, constant: -14),
-            stack.bottomAnchor.constraint(equalTo: aboutCard.bottomAnchor, constant: -14)
+            stack.topAnchor.constraint(equalTo: tweakCard.topAnchor, constant: 14),
+            stack.leadingAnchor.constraint(equalTo: tweakCard.leadingAnchor, constant: 14),
+            stack.trailingAnchor.constraint(equalTo: tweakCard.trailingAnchor, constant: -14),
+            stack.bottomAnchor.constraint(equalTo: tweakCard.bottomAnchor, constant: -14)
         ])
     }
 
-    private func loadSettings() {
-        botTokenField.text = DatabaseManager.shared.getSetting(key: "telegram_bot_token")
-        chatIdField.text = DatabaseManager.shared.getSetting(key: "telegram_chat_id")
-        adIntervalField.text = DatabaseManager.shared.getSetting(key: "default_ad_interval_hours") ?? "2"
+    // MARK: - Handlers
 
-        humanDelaySwitch.isOn = (DatabaseManager.shared.getSetting(key: "human_delay_enabled") ?? "true") == "true"
-        autoRestartSwitch.isOn = (DatabaseManager.shared.getSetting(key: "auto_restart_enabled") ?? "true") == "true"
+    @objc private func handleInstallTweak() {
+        // Run dpkg -i on bundled deb
+        let alert = UIAlertController(title: "Cài Đặt Tweak", message: "Đang cài đặt gói toriumhelper.deb vào hệ thống qua rootful dpkg...", preferredStyle: .alert)
+        present(alert, animated: true)
 
-        let currentInterval = DatabaseManager.shared.getSetting(key: "report_interval_hours") ?? "6"
-        if let idx = intervalOptions.firstIndex(of: currentInterval) {
-            intervalPicker.selectRow(idx, inComponent: 0, animated: false)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let bundleDeb = Bundle.main.path(forResource: "toriumhelper", ofType: "deb") ?? ""
+            let cmd = "dpkg -i '\(bundleDeb)' 2>/dev/null || dpkg -i /Applications/ToriumBot.app/toriumhelper.deb 2>/dev/null || dpkg -i /var/jb/Applications/ToriumBot.app/toriumhelper.deb 2>/dev/null"
+            system(cmd)
+            DispatchQueue.main.async {
+                alert.dismiss(animated: true) {
+                    let doneAlert = UIAlertController(title: "Hoàn Tất", message: "Tweak ToriumHelper đã được cài đặt vào hệ thống. Vui lòng respring nếu cần!", preferredStyle: .alert)
+                    doneAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(doneAlert, animated: true)
+                }
+            }
         }
     }
 
-    @objc private func saveSettings() {
-        DatabaseManager.shared.setSetting(key: "telegram_bot_token", value: botTokenField.text ?? "")
-        DatabaseManager.shared.setSetting(key: "telegram_chat_id", value: chatIdField.text ?? "")
-        DatabaseManager.shared.setSetting(key: "default_ad_interval_hours", value: adIntervalField.text ?? "2")
-        DatabaseManager.shared.setSetting(key: "human_delay_enabled", value: humanDelaySwitch.isOn ? "true" : "false")
-        DatabaseManager.shared.setSetting(key: "auto_restart_enabled", value: autoRestartSwitch.isOn ? "true" : "false")
-
-        let selectedRow = intervalPicker.selectedRow(inComponent: 0)
-        let interval = intervalOptions[selectedRow]
-        DatabaseManager.shared.setSetting(key: "report_interval_hours", value: interval)
-
-        TelegramReporter.shared.startPeriodicReporting()
-
-        let alert = UIAlertController(title: "Đã lưu", message: "Các cài đặt đã được lưu thành công.", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-
     @objc private func handleTestTelegram() {
-        // Temporarily save token and chat id for test
-        DatabaseManager.shared.setSetting(key: "telegram_bot_token", value: botTokenField.text ?? "")
-        DatabaseManager.shared.setSetting(key: "telegram_chat_id", value: chatIdField.text ?? "")
-
-        Task {
-            let success = await TelegramReporter.shared.sendMessage(text: "🔔 [ToriumBot] Test kết nối Telegram thành công! Bot đã sẵn sàng nhận cảnh báo.")
-            DispatchQueue.main.async {
-                let alert = UIAlertController(
-                    title: success ? "Kết nối thành công" : "Kết nối thất bại",
-                    message: success ? "Telegram bot đã gửi tin nhắn thử nghiệm thành công!" : "Không thể gửi tin nhắn. Vui lòng kiểm tra lại Bot Token và Chat ID.",
-                    preferredStyle: .alert
-                )
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.present(alert, animated: true)
-            }
+        saveSettings()
+        TelegramReporter.shared.sendTestMessage { [weak self] success, msg in
+            let alert = UIAlertController(title: success ? "Thành Công" : "Thất Bại", message: msg, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(alert, animated: true)
         }
     }
 
     @objc private func handleBackupAll() {
-        Task {
-            let res = await BackupManager.shared.backupAllAccounts()
-            DispatchQueue.main.async {
-                let alert = UIAlertController(title: res.success ? "Thành công" : "Lỗi", message: res.message, preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.present(alert, animated: true)
-            }
+        TelegramReporter.shared.sendManualBackup()
+        let alert = UIAlertController(title: "Đã gửi", message: "File backup đã được gửi tới Telegram của bạn!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    @objc private func saveSettings() {
+        DatabaseManager.shared.setSetting(key: "master_referral_code", value: masterRefField.text ?? "")
+        DatabaseManager.shared.setSetting(key: "sleep_simulator_enabled", value: sleepSimulatorSwitch.isOn ? "true" : "false")
+        DatabaseManager.shared.setSetting(key: "telegram_bot_token", value: botTokenField.text ?? "")
+        DatabaseManager.shared.setSetting(key: "telegram_chat_id", value: chatIdField.text ?? "")
+        DatabaseManager.shared.setSetting(key: "default_ad_interval_hours", value: adIntervalField.text ?? "2")
+        DatabaseManager.shared.setSetting(key: "human_delay_enabled", value: humanDelaySwitch.isOn ? "true" : "false")
+
+        if let ota = otaVersionField.text, !ota.isEmpty {
+            DatabaseManager.shared.setSetting(key: "x_ota_version", value: ota)
+        }
+        if let appV = appVersionField.text, !appV.isEmpty {
+            DatabaseManager.shared.setSetting(key: "x_app_version", value: appV)
+        }
+
+        let selectedInterval = intervalOptions[intervalPicker.selectedRow(inComponent: 0)]
+        DatabaseManager.shared.setSetting(key: "report_interval_hours", value: selectedInterval)
+        TelegramReporter.shared.restartPeriodicReportingIfRunning()
+
+        let alert = UIAlertController(title: "Đã Lưu", message: "Cài đặt hệ thống đã được cập nhật thành công!", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func loadSettings() {
+        masterRefField.text = DatabaseManager.shared.getSetting(key: "master_referral_code")
+        sleepSimulatorSwitch.isOn = DatabaseManager.shared.getSetting(key: "sleep_simulator_enabled") == "true"
+        botTokenField.text = DatabaseManager.shared.getSetting(key: "telegram_bot_token")
+        chatIdField.text = DatabaseManager.shared.getSetting(key: "telegram_chat_id")
+        adIntervalField.text = DatabaseManager.shared.getSetting(key: "default_ad_interval_hours") ?? "2"
+        humanDelaySwitch.isOn = DatabaseManager.shared.getSetting(key: "human_delay_enabled") != "false"
+        otaVersionField.text = DatabaseManager.shared.getSetting(key: "x_ota_version") ?? "0a9f87c3-0a5f-4ed5-aefd-7a9004875813"
+        appVersionField.text = DatabaseManager.shared.getSetting(key: "x_app_version") ?? "2.1.0"
+
+        let interval = DatabaseManager.shared.getSetting(key: "report_interval_hours") ?? "6"
+        if let idx = intervalOptions.firstIndex(of: interval) {
+            intervalPicker.selectRow(idx, inComponent: 0, animated: false)
         }
     }
+
+    // MARK: - UIPickerView
+
+    public func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
+    public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int { intervalOptions.count }
+    public func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? { "\(intervalOptions[row]) Giờ" }
 
     // MARK: - UI Helpers
 
@@ -300,50 +321,17 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         return label
     }
 
-    private func makeSwitchRow(title: String, toggleSwitch: UISwitch) -> UIView {
-        let container = UIView()
-        let label = UILabel()
-        label.text = title
-        label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
-        label.textColor = ToriumTheme.textPrimary
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        toggleSwitch.translatesAutoresizingMaskIntoConstraints = false
-        toggleSwitch.onTintColor = ToriumTheme.accentGold
-
-        container.addSubview(label)
-        container.addSubview(toggleSwitch)
-
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            label.trailingAnchor.constraint(equalTo: toggleSwitch.leadingAnchor, constant: -8),
-
-            toggleSwitch.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            toggleSwitch.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
-        ])
-        return container
-    }
-
-    private func styleTextField(_ field: UITextField, placeholder: String) {
-        field.placeholder = placeholder
-        field.textColor = ToriumTheme.textPrimary
-        field.backgroundColor = ToriumTheme.cardBackground
-        field.layer.cornerRadius = 8
-        field.layer.borderWidth = 1
-        field.layer.borderColor = ToriumTheme.cardBorder.cgColor
-        field.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        let padding = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 40))
-        field.leftView = padding
-        field.leftViewMode = .always
-    }
-
-    // MARK: - UIPickerViewDataSource & Delegate
-
-    public func numberOfComponents(in pickerView: UIPickerView) -> Int { return 1 }
-    public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int { return intervalOptions.count }
-    public func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        return "\(intervalOptions[row]) giờ"
+    private func styleTextField(_ tf: UITextField, placeholder: String) {
+        tf.placeholder = placeholder
+        tf.font = UIFont.systemFont(ofSize: 14)
+        tf.textColor = ToriumTheme.textPrimary
+        tf.backgroundColor = ToriumTheme.background
+        tf.layer.cornerRadius = 8
+        tf.layer.borderColor = ToriumTheme.border.cgColor
+        tf.layer.borderWidth = 1
+        tf.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        let padding = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 38))
+        tf.leftView = padding
+        tf.leftViewMode = .always
     }
 }

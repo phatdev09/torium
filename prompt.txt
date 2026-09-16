@@ -1,889 +1,160 @@
-# 🧠 TORIUM AIRDROP AUTOMATION TOOL — iOS NATIVE APP
-## Prompt dành cho Google Antigravity (Agentic Coding Agent)
+# 🧠 TORIUM AIRDROP AUTOMATION SUITE — iOS NATIVE & HEADLESS DAEMON (1% EXPERT EDITION)
+## Master Prompt dành cho Google Antigravity (Agentic Coding Agent)
 
 ---
 
-## VAI TRÒ CỦA NGƯƠI
-
-Ngươi là một senior iOS engineer kỳ cựu 10 năm kinh nghiệm, chuyên về:
-- iOS native app development (Swift + Objective-C)
-- Jailbreak tweak development (Theos/logos)
-- Network automation và HTTP client
-- Background daemon và process management trên iOS
-- TrollStore app deployment
-
-Ngươi làm việc như một giáo viên kiên nhẫn: giải thích từng bước, từng file, từng dòng code trước khi viết. Ngươi KHÔNG BAO GIỜ bỏ qua bước nào. Ngươi KHÔNG BAO GIỜ viết code mà không giải thích mục đích của nó.
+## VAI TRÒ & NGUYÊN TẮC BẤT BIẾN
+Ngươi là một **Principal iOS System Engineer & Reverse Engineer kỳ cựu 10 năm kinh nghiệm**, chuyên sâu về:
+- iOS Low-Level System Programming & POSIX LaunchDaemons trên iOS 15–16 rootful (palera1n, A9 / iPhone 6s/6s+).
+- Tweak Development với Theos / Logos (CydiaSubstrate / ElleKit), runtime hook, method swizzling, IPC (Darwin Notifications).
+- Tích hợp chuyên sâu API gốc của tweak Crane (tác giả opa334) qua `libCrane.dylib` (`libCrane.h`).
+- Network Automation, CFNetwork, NSURLSession proxy credentials & kỹ thuật chống 100% rò rỉ DNS (Zero DNS Leak).
+- Hệ thống phòng thủ chống phát hiện Bot/Sybil cấp độ Machine Learning (Fingerprint Spoofer, Ad Revenue Jitter).
 
 ---
 
-## TỔNG QUAN DỰ ÁN
+## TỔNG QUAN HỆ THỐNG (3 THÀNH PHẦN ĐỘC LẬP)
 
-Xây dựng một iOS native app tên **ToriumBot** để tự động hóa việc farm airdrop trên app Torium (blockchain L1, cơ chế Proof of Participation). App chạy trên iPhone jailbreak rootful (palera1n), cài qua TrollStore.
+Toàn bộ giải pháp được thiết kế tối ưu tuyệt đối cho phần cứng **iPhone 6s (Apple A9, 2GB RAM, 16–64GB bộ nhớ trong)**:
 
-**Torium app:** https://torium.network
-**Target device:** iPhone 6s/6s Plus, iOS 15-16, palera1n rootful jailbreak
-**Multi-container:** Dùng Crane tweak để tạo nhiều container app Torium độc lập
+```
+Torium Airdrop Automation Suite
+├── 1. ToriumDaemon (Headless Background Daemon 24/7)
+│   ├── POSIX LaunchDaemon chạy dưới quyền root (/Library/LaunchDaemons/)
+│   ├── Không phụ thuộc SpringBoard, không bị iOS Jetsam kill khi khoá màn hình / cạn RAM
+│   ├── WorkerPoolManager: Điều tiết tải linh hoạt (Mode 1: Eco 3-5 workers ⇄ Mode 2: Turbo Max Speed)
+│   ├── AntiSybilProfiler: Random model Android (Samsung/Pixel/Xiaomi), khớp utcOffset theo Geo-IP Proxy, random valueMicros
+│   ├── AdYieldEngine: Cày full công suất 120 ads/ngày (burst hết số lượt/giờ + human delay 10-25s)
+│   ├── ProxyShield: URLCredential auth, SOCKS5 DNS-safe routing, auto failover 30p & backup pool
+│   └── NWPathMonitor: Đóng băng tác vụ khi mất WiFi/4G, tự hồi phục khi có mạng
+│
+├── 2. ToriumHelper.dylib (Theos / Logos Tweak Hook)
+│   ├── Inject trực tiếp vào process network.torium.app trong mọi Crane container
+│   ├── In-App Proxy Swizzling: Ép toàn bộ kết nối đăng ký & Cloudflare Turnstile qua Proxy của container
+│   ├── Universal Smart Inspector 3 tầng: Tự động điền Email, Password, Referral Code vào form
+│   ├── Smart Segmented OTP Filler: Điền mã 6 số từ dongvanfb API vào form (hỗ trợ cả 1 ô lẫn 6 ô rời)
+│   ├── Auth Sniffer: Tóm Bearer token, clerkId, deviceId từ Clerk session lưu thẳng vào SQLite
+│   └── Dynamic OTA Sync: Tóm x-ota-version và x-app-version mới nhất từ traffic app thật
+│
+└── 3. ToriumBot.app (UIKit Native Manager - Dark Theme #0A0A0A & Gold #C9A84C)
+    ├── Tab 1: Dashboard (Switch Mode Eco/Turbo, Realtime Stats, Tiến trình từng account)
+    ├── Tab 2: Accounts (Smart Multi-Format Parser, Preview Grid lọc trùng, Sequential Batch Queue)
+    ├── Tab 3: Settings (Master Ref Code, Cài Tweak 1 chạm dpkg -i, Telegram Alerts, Giờ ngủ ban đêm, Cập nhật OTA)
+    └── Tab 4: Logs (Stream màu thời gian thực INFO / WARN / ERROR)
+```
 
 ---
 
-## KIẾN TRÚC HỆ THỐNG
+## DỮ LIỆU REVERSE-ENGINEERED API TORIUM (THỰC TẾ & CHÍNH XÁC 100%)
 
-ToriumBot (Main App - Brain)
-├── AccountManager → Quản lý tất cả accounts
-├── ContainerManager → Điều khiển Crane containers
-├── ProxyManager → Gán proxy riêng từng account
-├── AuthExtractor → Tự động lấy Bearer token từng container
-├── MiningEngine → Scheduler xem ad + check-in per account
-├── TelegramReporter → Gửi alert + báo cáo thụ động
-├── WatchdogDaemon → Background daemon 24/7
-├── BackupManager → Backup accounts theo lệnh thủ công
-└── DatabaseManager → SQLite local storage
+### Base URL: `https://api.torium.network`
 
-
----
-
-## API TORIUM ĐÃ REVERSE ENGINEER — ĐÂY LÀ DỮ LIỆU THẬT, DÙNG CHÍNH XÁC
-
-### Base URL
-
-https://api.torium.network
-
-
-### Authentication
-Tất cả request (trừ /device/session) PHẢI có header:
-
+### Headers Bắt Buộc (Mọi Request Có Auth):
+```http
 Authorization: Bearer {token}
-x-app-version: 2.1.0
+x-app-version: {x_app_version}
 x-device-id: {deviceId}
-x-ota-version: 0a9f87c3-0a5f-4ed5-aefd-7a9004875813
+x-ota-version: {x_ota_version}
 User-Agent: okhttp/4.12.0
 Content-Type: application/json
 Accept-Encoding: gzip
-
-
-### Endpoint 1 — Đăng ký Device Session
-
-POST https://api.torium.network/device/session
-
-Request Body:
-{
-"platform": "android",
-"deviceId": "{deviceId}",
-"deviceModel": "V2452A",
-"osVersion": "16",
-"appVersion": "2.1.0",
-"isRooted": false,
-"clerkId": "{clerkId}"
-}
-
-Response: {"success": true}
-
-
-### Endpoint 2 — Check Mining Status
-
-GET https://api.torium.network/v1/mining/v2/session-status
-Headers: Authorization required
-
-Response:
-{
-"status": "mining",
-"rate": 0.48
-}
-
-
-### Endpoint 3 — Check Wallet Balance
-
-GET https://api.torium.network/v1/wallet/balance
-Headers: Authorization required
-
-
-### Endpoint 4 — Check Boost State
-
-GET https://api.torium.network/v1/mining/boost-state?abVariant=unlimited
-Headers: Authorization required
-
-
-### Endpoint 5 — Tạo Rewarded Intent (BƯỚC 1 XEM AD)
-
-POST https://api.torium.network/v1/mining/v2/rewarded-intents
-Headers: Authorization required
-
-Response 201:
-{
-"intentId": "rad_{uuid}"
-}
-
-
-### Endpoint 6 — Verify Rewarded Intent (BƯỚC 2 XEM AD)
-
-GET https://api.torium.network/v1/mining/v2/rewarded-intents/{intentId}
-Headers: Authorization required
-
-Response 200:
-{
-"status": "verified",
-"verifiedAt": {timestamp_ms},
-"expiresAt": {timestamp_ms},
-"failureReason": null,
-"consumedAt": null
-}
-
-
-### Endpoint 7 — Boost Mining (BƯỚC 3 XEM AD — QUAN TRỌNG NHẤT)
-
-POST https://api.torium.network/v1/mining/v2/boost
-Headers: Authorization required
-
-Request Body:
-{
-"verifiedIntentId": "{intentId_từ_bước_1}",
-"adRevenue": {
-"currency": "USD",
-"precision": 3,
-"valueMicros": 10092,
-"occurredAt": {current_timestamp_milliseconds},
-"localDateKey": "{YYYY-MM-DD}",
-"utcOffsetMinutes": 420
-}
-}
-
-Response 200:
-{
-"boostCount": 3,
-"totalBoostRate": 0.24,
-"newRate": 0.704,
-"grantedSlots": 1,
-"bucket": {
-"hourlyRemaining": 2,
-"hourlyResetAt": {timestamp_ms},
-"dailyRemaining": 117,
-"dailyCap": 120,
-"hourlyCap": 5,
-"cooldownEndsAt": {timestamp_ms},
-"cooldownRemainingMs": 10000
-}
-}
-
-
-### Endpoint 8 — Activity Ticker (Keepalive)
-
-GET https://api.torium.network/v1/activity/ticker
-Headers: Authorization required
-
-
-### RATE LIMITS — BẮT BUỘC TUÂN THỦ
-- Tối đa 5 lần boost per giờ (hourlyCap: 5)
-- Tối đa 120 lần boost per ngày (dailyCap: 120)
-- Cooldown 10 giây giữa mỗi lần boost (cooldownRemainingMs: 10000)
-- Sau mỗi boost PHẢI đọc response để biết hourlyRemaining còn bao nhiêu
-- Nếu hourlyRemaining = 0, PHẢI chờ đến hourlyResetAt mới boost tiếp
-
-### FLOW XEM AD HOÀN CHỈNH (3 bước tuần tự, KHÔNG ĐƯỢC bỏ bước nào)
-
-Bước 1: POST /v1/mining/v2/rewarded-intents → lấy intentId
-Bước 2: GET /v1/mining/v2/rewarded-intents/{intentId} → verify (status phải là "verified")
-Bước 3: POST /v1/mining/v2/boost với intentId đó → claim boost
-Bước 4: Đọc cooldownRemainingMs từ response → sleep đúng số ms đó trước lần tiếp theo
-
-
----
-
-## ĐĂNG KÝ TÀI KHOẢN TỰ ĐỘNG
-
-### Flow đăng ký
-Torium dùng Clerk auth system. Login screen: Email + Password.
-Register screen: Email + Password + Referral Code (optional) + Cloudflare Turnstile captcha.
-
-**Quan trọng:** Cloudflare Turnstile được USER tự solve thủ công. Tool KHÔNG tự bypass captcha.
-
-### Đọc email OTP qua dongvanfb.net API
-Torium gửi OTP verify email sau khi đăng ký.
-Tool tích hợp API đọc hộp thư Hotmail qua dongvanfb.net.
-
-**Format account import:**
-
-email|password|refresh_token|client_id
-
-(mỗi dòng 1 account, dùng ký tự pipe | làm delimiter)
-
-**API đọc email dongvanfb.net:**
-- Endpoint: https://docs.dongvanfb.net/ (đọc docs để lấy endpoint chính xác)
-- Method: OAuth2
-- Input: email|password|refresh_token|client_id
-- Output: đọc hộp thư, lấy OTP từ email Torium
-
-**Flow đăng ký tự động:**
-User import file accounts.txt (format email|password|refresh_token|client_id)
-Tool mở Torium register trong container tương ứng
-Tool tự điền email + password vào form
-Tool hiển thị popup "Vui lòng solve captcha Cloudflare" → user tự solve
-User nhấn "Đã solve xong" trong ToriumBot
-Tool gọi dongvanfb.net API để đọc email OTP
-Tool tự điền OTP vào app Torium
-Tool extract Bearer token từ container sau khi login thành công
-Lưu toàn bộ thông tin account vào SQLite
-
----
-
-## AUTO LOGIN & TOKEN EXTRACTION
-
-Sau khi đăng ký hoặc import account có sẵn:
-Tool mở container Crane tương ứng
-Tool điều khiển UIAutomation để nhập email + password
-Nhấn nút "Tiếp tục"
-Sau khi login thành công, intercept network traffic của container
-Extract Bearer token từ header Authorization của bất kỳ request nào đến api.torium.network
-Extract clerkId từ body của POST /device/session
-Extract deviceId từ body của POST /device/session
-Lưu {token, clerkId, deviceId} vào database gắn với account đó
-Token này là STATIC (không thay đổi giữa các session) → dùng lâu dài
-
----
-
-## DATABASE SCHEMA — SQLITE
-
-```sql
--- Bảng accounts
-CREATE TABLE accounts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  bearer_token TEXT,
-  clerk_id TEXT,
-  device_id TEXT,
-  proxy_host TEXT,
-  proxy_port INTEGER,
-  proxy_username TEXT,
-  proxy_password TEXT,
-  proxy_protocol TEXT, -- http/https/socks4/socks5
-  container_id TEXT,   -- Crane container identifier
-  is_active INTEGER DEFAULT 1,
-  is_banned INTEGER DEFAULT 0,
-  created_at INTEGER,
-  last_seen_at INTEGER
-);
-
--- Bảng mining_stats
-CREATE TABLE mining_stats (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  account_id INTEGER REFERENCES accounts(id),
-  date TEXT NOT NULL,          -- YYYY-MM-DD
-  ads_watched INTEGER DEFAULT 0,
-  ads_remaining_today INTEGER,
-  ads_remaining_hour INTEGER,
-  tor_balance REAL,
-  boost_rate REAL,
-  last_ad_at INTEGER,          -- timestamp ms
-  last_checkin_at INTEGER,     -- timestamp ms
-  next_ad_at INTEGER,          -- timestamp ms (scheduled)
-  next_checkin_at INTEGER,     -- timestamp ms (scheduled)
-  UNIQUE(account_id, date)
-);
-
--- Bảng logs
-CREATE TABLE logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  account_id INTEGER REFERENCES accounts(id),
-  level TEXT,       -- INFO/WARN/ERROR
-  action TEXT,      -- AD_WATCH/CHECKIN/LOGIN/PROXY_CHANGE/ERROR
-  message TEXT,
-  created_at INTEGER
-);
-
--- Bảng settings
-CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
--- Default settings:
--- telegram_bot_token: ""
--- telegram_chat_id: ""
--- report_interval_hours: "6"
--- timezone_offset: "420"  (UTC+7 = 420 phút)
 ```
 
----
+### Endpoints Danh Sách:
+1. `POST /device/session` (Đăng ký device session, Body: platform, deviceId, deviceModel, osVersion, appVersion, isRooted, clerkId)
+2. `GET /v1/mining/v2/session-status` (Check trạng thái mining, Response: status, rate)
+3. `GET /v1/wallet/balance` (Check số dư ví TOR)
+4. `GET /v1/mining/boost-state?abVariant=unlimited` (Check trạng thái boost)
+5. `POST /v1/mining/v2/rewarded-intents` (Bước 1 xem Ad: Tạo rewarded intent, Response: intentId)
+6. `GET /v1/mining/v2/rewarded-intents/{intentId}` (Bước 2 xem Ad: Verify, Response: status == "verified")
+7. `POST /v1/mining/v2/boost` (Bước 3 xem Ad: Claim boost với verifiedIntentId và adRevenue payload)
+8. `GET /v1/activity/ticker` (Keepalive activity ticker)
 
-## SCHEDULER LOGIC — BẮT BUỘC ĐÚNG
-
-### Ad watching scheduler (per account)
-Mỗi account có interval_hours riêng (user set, default 2 giờ)
-Khi đến giờ: thực hiện flow xem ad
-Sau khi xem xong: đọc bucket từ response
-Nếu hourlyRemaining > 0 VÀ cooldownRemainingMs đã hết: có thể xem thêm trong giờ này
-Nếu hourlyRemaining = 0: schedule lần tiếp theo = hourlyResetAt
-Nếu dailyRemaining = 0: dừng hôm nay, schedule lần tiếp = 00:01 ngày mai theo UTC+7
-Giữa các lần xem trong cùng 1 giờ: sleep cooldownRemainingMs milliseconds
-KHÔNG bao giờ vượt quá hourlyCap (5) hoặc dailyCap (120)
-
-### Daily check-in scheduler (per account)
-Check-in ĐÚNG 24 giờ sau lần check-in trước
-Giờ check-in random trong khung ±30 phút so với giờ check-in lần đầu
-Ví dụ: check-in đầu lúc 08:00 → lần sau random từ 07:30-08:30
-Múi giờ UTC+7
-
-### Proxy switch logic (per container)
-Trước khi thực hiện BẤT KỲ action nào cho 1 container:
-Kết nối proxy của account đó
-Verify proxy hoạt động bằng cách ping https://api.torium.network
-Nếu proxy chết → alert Telegram ngay → skip account này → qua account tiếp theo
-Chỉ khi proxy verify OK → mới thực hiện action
+### Rate Limits & Yield Rules:
+- Tối đa 5 lần boost/giờ (`hourlyCap: 5`)
+- Tối đa 120 lần boost/ngày (`dailyCap: 120`)
+- Cooldown server tối thiểu 10s (`cooldownRemainingMs: 10000`).
+- **Max Airdrop Yield Strategy:** Khi đến phiên cày, xem hết toàn bộ số lượt cho phép trong giờ đó (`hourlyRemaining`, tối đa 5 ads), giữa các ad nghỉ 10s cooldown + 5–15s random human jitter, sau đó nghỉ và hẹn giờ phiên tiếp theo để chạm mốc 120 ads/ngày.
 
 ---
 
-## RETRY LOGIC — BẮT BUỘC
+## TÍCH HỢP TWEAK CRANE (OPA334 LIBCRANE API NATIVE)
 
-Với MỌI API call đến api.torium.network:
+ToriumBot giao tiếp trực tiếp với `libcrane.dylib` (được cung cấp bởi opa334 trên Havoc repo `https://havoc.app/package/crane`):
 
-Attempt 1 → nếu thất bại → log WARNING → chờ 5 giây
-Attempt 2 → nếu thất bại → log WARNING → chờ 10 giây
-Attempt 3 → nếu thất bại → log ERROR → alert Telegram → mark account là ERROR → skip
-Nếu response là 401 Unauthorized → token hết hạn → alert Telegram "Token cần refresh cho account {email}"
-Nếu response là 403 Forbidden → account có thể bị ban → alert Telegram "Account {email} có thể đã bị ban"
-
----
-
-## TELEGRAM BOT — CHỈ GỬI THÔNG BÁO THỤ ĐỘNG
-
-Bot chỉ GỬI, KHÔNG nhận lệnh từ Telegram.
-
-### Alert ngay lập tức (gửi ngay khi xảy ra)
-
-🔴 [ToriumBot] Account bị lỗi
-📧 Email: {email}
-❌ Lỗi: {error_message}
-🔄 Đã retry 3 lần, tất cả thất bại
-⏰ {datetime UTC+7}
-
-⚠️ [ToriumBot] Proxy chết
-📧 Account: {email}
-🌐 Proxy: {proxy_host}:{proxy_port}
-⏰ {datetime UTC+7}
-
-🚫 [ToriumBot] Account có thể bị ban
-📧 Email: {email}
-📋 Response: 403 Forbidden
-⏰ {datetime UTC+7}
-
-🔑 [ToriumBot] Token cần refresh
-📧 Email: {email}
-📋 Response: 401 Unauthorized
-⏰ {datetime UTC+7}
-
-
-### Báo cáo định kỳ (mỗi X giờ, X do user set, default 6h)
-
-📊 [ToriumBot] Báo cáo {datetime UTC+7}
-
-✅ Active: {n} accounts
-❌ Lỗi: {n} accounts
-
-📋 Chi tiết từng account:
-━━━━━━━━━━━━━━━━━━━━
-📧 {email_1}
-💰 TOR Balance: {balance}
-📺 Ad hôm nay: {ads_watched}/120
-⚡ Boost Rate: {rate}
-🕐 Ad tiếp theo: {next_ad_time}
-✅ Trạng thái: Active
-━━━━━━━━━━━━━━━━━━━━
-📧 {email_2}
-...
-
+### C/Obj-C Bridge (`CraneBridge`):
+- `createNewContainerWithName:forApplicationWithIdentifier:`: Tự động sinh container khi import tài khoản mới (đặt tên: `01. user@hotmail.com`).
+- `setActiveContainerIdentifier:forApplicationWithIdentifier:`: Chuyển đổi container active.
+- `containerIdentifiersOfApplicationWithIdentifier:`: Liệt kê toàn bộ container.
+- `deleteContainerWithIdentifier:forApplicationWithIdentifier:`: Tự động xoá container khi xoá account trong bot.
+- `pathsAssociatedToContainerWithIdentifier:forApplicationWithIdentifier:`: Lấy chính xác đường dẫn Sandbox `ContainerPathTypeApp`.
+- **Dọn dẹp Caches:** Tự động xoá `Library/Caches` và `Library/WebKit` của container sau khi lấy token để giảm dung lượng xuống <5MB/container.
+- **Quy trình kích hoạt Container an toàn:** `killall -9 Torium` -> `setActiveContainerIdentifier:` -> mở app bằng `LSApplicationWorkspace` (Private iOS API).
 
 ---
 
-## GIAO DIỆN NATIVE iOS — YÊU CẦU CHI TIẾT
+## TORIUMHELPER TWEAK (IN-APP AUTOMATION & HOOK)
 
-### Design System
-- Dark theme hoàn toàn (background: #0A0A0A)
-- Accent color: vàng Torium (#C9A84C)
-- Font: SF Pro Display
-- Corner radius: 12pt
-- Shadow: subtle, elevation 2
+### 1. In-App Proxy Swizzling:
+Tweak hook `[NSURLSessionConfiguration defaultSessionConfiguration]` và `ephemeralSessionConfiguration` bên trong tiến trình Torium:
+- Đọc proxy gán cho container từ `/var/mobile/Library/ToriumBot/ipc/proxy.json`.
+- Gán `connectionProxyDictionary` tương ứng.
+- Đảm bảo toàn bộ kết nối đăng ký và **Cloudflare Turnstile** đi qua Proxy, bảo vệ tuyệt đối IP mạng thật của điện thoại.
 
-### Tab Bar (4 tabs)
+### 2. Universal Smart Inspector 3 Tầng:
+- **Tầng 1 (Label/Placeholder):** Tìm kiếm ô theo chuỗi "Email", "EMAIL ADDRESS", "Mật khẩu", "PASSWORD", "REFERRAL CODE (OPTIONAL)".
+- **Tầng 2 (Index Order):** Nếu app obfuscate: Index [0] = Email, Index [1] = Password, Index [2] = Referral Code.
+- **Tầng 3 (State Activation):** Gán trực tiếp `setText:` đồng thời phát sự kiện bàn phím (`UIKeyCommand` / `insertText:` / `UITextFieldTextDidChangeNotification`) để app nhận diện và làm sáng nút "Continue" / "Tiếp tục".
 
-Tab 1: 🏠 Dashboard → Tổng quan tất cả accounts
-Tab 2: 👤 Accounts → Danh sách + quản lý accounts
-Tab 3: ⚙️ Settings → Cài đặt Telegram, interval, v.v.
-Tab 4: 📋 Logs → Log realtime
+### 3. Smart Segmented OTP Filler:
+- Nhận mã OTP 6 số từ IPC (`/var/mobile/Library/ToriumBot/ipc/otp.json`).
+- Tự động điền vào 1 ô dài hoặc rải đều vào 6 ô mã rời rạc.
+- Timeout 60s cho phép người dùng tự gõ tay nếu hộp thư đến trễ.
 
-
-### Tab 1 — Dashboard
-
-Header: "ToriumBot" + status badge (Running/Paused)
-Cards tổng hợp:
-
-Total Active Accounts
-Total TOR Today
-Total Ads Watched Today
-Accounts với lỗi
-List accounts: mỗi account 1 row với:
-Email (truncated)
-Status badge (Active/Error/Banned/Paused)
-TOR balance
-"Ad {n}/120 hôm nay"
-Countdown đến lần xem ad tiếp theo
-
-### Tab 2 — Accounts
-
-Button "+" để thêm account mới
-Button "Import File" để import file txt
-Mỗi account cell: swipe left để xóa, tap để xem chi tiết
-Account detail screen:
-
-Email, Status
-Bearer Token (masked, tap để reveal)
-Proxy info
-Mining stats hôm nay
-Lịch sử 7 ngày gần nhất
-Buttons: Edit Proxy / Pause / Delete
-Button "Manual Backup" → gửi info account này qua Telegram
-
-### Tab 3 — Settings
-
-Section Telegram:
-
-Bot Token (text field)
-Chat ID (text field)
-Test Connection button
-Report Interval (picker: 1h/3h/6h/12h/24h)
-
-Section Automation:
-
-Default Ad Interval per account (số giờ)
-Human Delay (toggle: bật/tắt delay ngẫu nhiên)
-Auto Restart on Error (toggle)
-
-Section Backup:
-
-Button "Backup Tất Cả Accounts" → gửi file txt qua Telegram
-Format backup: email|password|bearer_token|clerk_id|device_id|proxy
-
-Section About:
-
-Version, Credits
-
-### Tab 4 — Logs
-
-Realtime log stream
-Filter: All / INFO / WARN / ERROR
-Mỗi log entry: timestamp + level badge + message
-Auto-scroll to bottom
-Clear logs button
-
+### 4. IPC (Inter-Process Communication):
+- Thư mục trao đổi: `/var/mobile/Library/ToriumBot/ipc/` (file `task.json`, `otp.json`, `proxy.json`, `result.json`).
+- Kênh thông báo: `CFNotificationCenterGetDarwinNotifyCenter` với các định danh:
+  - `com.toriumbot.reg_start`
+  - `com.toriumbot.otp_ready`
+  - `com.toriumbot.auth_extracted`
 
 ---
 
-## WATCHDOG DAEMON
+## ANTI-SYBIL PROFILER & PHÒNG VỆ BAN HÀNG LOẠT
 
-Chạy như LaunchDaemon trên jailbreak rootful.
-
-File: /Library/LaunchDaemons/com.toriumbot.watchdog.plist
-Interval: check mỗi 60 giây
-Nhiệm vụ:
-
-Kiểm tra ToriumBot main process còn sống không
-Nếu crash → restart ngay
-Kiểm tra mining engine còn chạy không
-Ghi log watchdog events
-
-Daemon PHẢI chạy kể cả khi:
-- Màn hình tắt
-- App bị swipe away
-- iPhone idle
-- Không có user tương tác
+1. **Device Fingerprint Pool:**
+   - Mỗi account được cấp 1 `deviceId` ngẫu nhiên vĩnh viễn (MD5 hex 32 ký tự).
+   - Chọn ngẫu nhiên `deviceModel` từ pool: `SM-S928B` (Galaxy S24 Ultra), `SM-S918B` (S23 Ultra), `Pixel 8 Pro`, `Pixel 7a`, `23049PCD8G` (POCO F5), `CPH2451` (OnePlus 11).
+   - `osVersion` tương ứng: `13`, `14`, hoặc `15`.
+2. **Geo-IP Timezone Offset Matching:**
+   - Tự động tính toán `utcOffsetMinutes` và `localDateKey` theo quốc gia của Proxy (Mỹ: -300 đến -480, Châu Âu: 60 đến 120, VN/Đông Nam Á: 420).
+3. **Ad Revenue Micro-Cents Jitter:**
+   - Giá trị `valueMicros` được sinh ngẫu nhiên trong dải thực tế của AdMob Rewarded Video: `8,120` đến `24,350` (thay vì con số tĩnh 10092).
+4. **Mô Phỏng Giấc Ngủ (Sleep Simulator):**
+   - Tuỳ chọn trong Settings: Ngừng cày ad trong khung giờ sinh học (ví dụ: 01:30 – 05:30 sáng) để profile tài khoản trông 100% như người thật.
 
 ---
 
-## CRANE CONTAINER MANAGEMENT
-
-Crane là tweak jailbreak cho phép clone app thành nhiều container độc lập.
-Mỗi container có:
-- Bundle ID riêng (vd: network.torium.app.clone1, .clone2, ...)
-- Storage riêng hoàn toàn (UserDefaults, Keychain, Documents)
-- Network traffic riêng
-
-ToriumBot tương tác với Crane qua:
-Đọc danh sách containers qua Crane API/filesystem
-Mở container cụ thể bằng URL scheme hoặc openURL
-UIAutomation để điều khiển app trong container
-Network interception để lấy Bearer token
-
----
-
-## PROXY CONFIGURATION
-
-Hỗ trợ: HTTP, HTTPS, SOCKS4, SOCKS5
-
-Mỗi account lưu:
-
-proxy_protocol: http | https | socks4 | socks5
-proxy_host: string
-proxy_port: integer
-proxy_username: string (optional)
-proxy_password: string (optional)
-
-
-Proxy được set per-request trong URLSession configuration của account đó:
-```swift
-// Pseudo-code
-let config = URLSessionConfiguration.default
-config.connectionProxyDictionary = [
-  kCFNetworkProxiesHTTPEnable: true,
-  kCFNetworkProxiesHTTPProxy: proxyHost,
-  kCFNetworkProxiesHTTPPort: proxyPort
-  // tương tự cho SOCKS
-]
-let session = URLSession(configuration: config)
-```
-
-Verify proxy trước khi dùng:
-
-GET https://api.torium.network/v1/mining/v2/session-status qua proxy đó
-Timeout: 10 giây
-Nếu thành công → proxy OK
-Nếu timeout/error → proxy chết → alert
-
-
----
-
-## BACKUP FORMAT
-
-Khi user nhấn "Backup", tool tạo file txt và gửi qua Telegram Bot:
-
-File name: toriumbot_backup_{YYYY-MM-DD_HH-mm}.txt
-
-Nội dung (mỗi dòng 1 account):
-email|password|bearer_token|clerk_id|device_id|proxy_protocol|proxy_host|proxy_port|proxy_username|proxy_password
-
-Ví dụ:
-user@hotmail.com|Pass123!|nGQfGmEJNk2xIc...|user_3H8rd5GW8V...|2ee2a1168c530eed|socks5|proxy.example.com|1080|user|pass
-
-
----
-
-## TECH STACK — BẮT BUỘC DÙNG ĐÚNG
-
-Language: Swift 5.9+
-UI Framework: UIKit (KHÔNG dùng SwiftUI — kém ổn định trên jailbreak)
-Minimum iOS: 15.0
-Database: SQLite (dùng GRDB.swift hoặc SQLite.swift)
-Networking: URLSession (built-in, không cần Alamofire)
-Background: POSIX threads + LaunchDaemon (không dùng BackgroundTasks framework — jailbreak hỗ trợ tốt hơn)
-Keychain: Lưu bearer token qua Security framework
-Installation: TrollStore (IPA không cần sign)
-Jailbreak: palera1n rootful, iOS 15-16, iPhone 6s/6s Plus (A9 chip)
-Container: Crane tweak
-
-
----
-
-## CẤU TRÚC FILE DỰ ÁN
-
-ToriumBot/
-├── ToriumBot.xcodeproj
-├── ToriumBot/
-│ ├── App/
-│ │ ├── AppDelegate.swift
-│ │ └── SceneDelegate.swift
-│ ├── Core/
-│ │ ├── Database/
-│ │ │ ├── DatabaseManager.swift ← SQLite setup + migrations
-│ │ │ └── Models/
-│ │ │ ├── Account.swift
-│ │ │ ├── MiningStats.swift
-│ │ │ └── Log.swift
-│ │ ├── Network/
-│ │ │ ├── ToriumAPIClient.swift ← Tất cả API calls đến api.torium.network
-│ │ │ ├── ProxyURLSession.swift ← URLSession với proxy per-account
-│ │ │ └── DongVanFBClient.swift ← API đọc email OTP
-│ │ ├── Mining/
-│ │ │ ├── MiningEngine.swift ← Core automation logic
-│ │ │ ├── AdWatcher.swift ← Flow xem ad 3 bước
-│ │ │ ├── CheckInManager.swift ← Daily check-in logic
-│ │ │ └── Scheduler.swift ← Per-account scheduling
-│ │ ├── Auth/
-│ │ │ ├── TokenExtractor.swift ← Lấy Bearer token từ container
-│ │ │ └── AccountRegistrar.swift ← Tự động đăng ký account
-│ │ ├── Container/
-│ │ │ └── CraneManager.swift ← Quản lý Crane containers
-│ │ ├── Proxy/
-│ │ │ └── ProxyManager.swift ← Verify + switch proxy
-│ │ ├── Telegram/
-│ │ │ └── TelegramReporter.swift ← Gửi alerts + báo cáo
-│ │ ├── Backup/
-│ │ │ └── BackupManager.swift ← Tạo + gửi file backup
-│ │ └── Watchdog/
-│ │ └── WatchdogDaemon.swift ← Background daemon
-│ └── UI/
-│ ├── Dashboard/
-│ │ ├── DashboardViewController.swift
-│ │ └── AccountSummaryCell.swift
-│ ├── Accounts/
-│ │ ├── AccountsViewController.swift
-│ │ ├── AccountDetailViewController.swift
-│ │ ├── AddAccountViewController.swift
-│ │ └── ImportAccountViewController.swift
-│ ├── Settings/
-│ │ └── SettingsViewController.swift
-│ └── Logs/
-│ └── LogsViewController.swift
-├── Daemon/
-│ ├── watchdog_daemon.c ← LaunchDaemon binary
-│ └── com.toriumbot.watchdog.plist ← LaunchDaemon config
-└── Resources/
-└── Assets.xcassets
-
-
----
-
-## HƯỚNG DẪN BUILD TỪNG BƯỚC — TUẦN TỰ, KHÔNG ĐƯỢC BỎ BƯỚC
-
-### Phase 1: Project Setup
-
-Bước 1.1: Tạo Xcode project mới
-
-Product Name: ToriumBot
-Bundle ID: com.toriumbot.app
-Language: Swift
-Interface: Storyboard (KHÔNG dùng SwiftUI)
-Minimum iOS: 15.0
-
-Bước 1.2: Thêm dependencies qua Swift Package Manager
-
-GRDB.swift: https://github.com/groue/GRDB.swift (SQLite)
-Không thêm gì khác
-
-Bước 1.3: Cấu hình TrollStore deployment
-
-Tắt code signing (Any iOS SDK)
-Tắt entitlements không cần thiết
-Thêm entitlement: com.apple.private.security.no-container = true
-
-Bước 1.4: Tạo toàn bộ folder structure như trên
-
-
-### Phase 2: Database Layer
-
-Bước 2.1: Implement DatabaseManager.swift
-
-Setup SQLite database tại Documents/toriumbot.db
-Chạy migrations khi app khởi động
-Create tables: accounts, mining_stats, logs, settings
-Insert default settings nếu chưa có
-
-Bước 2.2: Implement Model structs
-
-Account: Codable, Identifiable
-MiningStats: Codable
-Log: Codable
-CRUD methods cho từng model
-
-### Phase 3: Networking Layer
-
-Bước 3.1: Implement ProxyURLSession.swift
-
-Tạo URLSession với proxy config per-account
-Hỗ trợ HTTP, HTTPS, SOCKS4, SOCKS5
-Timeout: 30 giây
-
-Bước 3.2: Implement ToriumAPIClient.swift
-
-Implement tất cả 8 endpoints đã liệt kê ở trên
-CHÍNH XÁC từng field, từng header
-Retry logic: 3 lần với delay 5s, 10s
-Parse response JSON thành Swift structs
-Throw custom errors: .unauthorized, .forbidden, .rateLimited, .networkError
-
-Bước 3.3: Implement DongVanFBClient.swift
-
-Gọi API đọc email theo docs tại https://docs.dongvanfb.net/
-Input: email|password|refresh_token|client_id
-Output: OTP code từ email Torium
-Timeout: 60 giây (email có thể đến chậm)
-
-### Phase 4: Mining Engine
-
-Bước 4.1: Implement AdWatcher.swift
-
-Flow 3 bước chính xác:
-Step 1: POST /v1/mining/v2/rewarded-intents
-Step 2: GET /v1/mining/v2/rewarded-intents/{id} (verify status == "verified")
-Step 3: POST /v1/mining/v2/boost với adRevenue
-Sau bước 3: cập nhật mining_stats trong database
-Return BucketInfo (hourlyRemaining, dailyRemaining, cooldownRemainingMs)
-
-Bước 4.2: Implement CheckInManager.swift
-
-POST /device/session để keepalive
-Lưu last_checkin_at
-Calculate next_checkin_at = last_checkin_at + 24h + random(-30min, +30min)
-
-Bước 4.3: Implement Scheduler.swift
-
-Per-account timer management
-Đọc next_ad_at và next_checkin_at từ database
-Fire action đúng giờ
-Cập nhật lại schedule sau mỗi action dựa trên response
-
-Bước 4.4: Implement MiningEngine.swift
-
-Orchestrate tất cả accounts
-Verify proxy trước mỗi action
-Gọi AdWatcher và CheckInManager
-Handle errors và gọi TelegramReporter
-Thread-safe: mỗi account chạy trên background queue riêng
-
-### Phase 5: Telegram Reporter
-
-Bước 5.1: Implement TelegramReporter.swift
-
-Dùng Telegram Bot API: https://api.telegram.org/bot{token}/sendMessage
-sendMessage(text:) cho alert
-sendDocument(data:filename:) cho backup file
-Các message templates như đã định nghĩa ở trên
-Retry 3 lần nếu gửi thất bại
-
-Bước 5.2: Implement báo cáo định kỳ
-
-Timer chạy mỗi X giờ (lấy từ settings)
-Collect data từ tất cả accounts
-Format và gửi báo cáo tổng hợp
-
-### Phase 6: UI Implementation
-
-Bước 6.1: Setup TabBarController
-
-4 tabs: Dashboard, Accounts, Settings, Logs
-Tab bar style: dark, accent vàng 
-#C9A84C
-
-Bước 6.2: Implement DashboardViewController
-
-Header với status badge
-4 summary cards (UICollectionView horizontal scroll)
-TableView danh sách accounts
-Realtime update mỗi 5 giây
-
-Bước 6.3: Implement AccountsViewController + AccountDetailViewController
-
-List accounts với swipe actions
-Detail screen với tất cả thông tin
-EditProxy screen
-Manual backup button
-
-Bước 6.4: Implement ImportAccountViewController
-
-Paste text hoặc import từ Files app
-Parse format: email|password|refresh_token|client_id
-Validate format trước khi import
-Preview danh sách trước khi confirm
-
-Bước 6.5: Implement AddAccountViewController
-
-Form đăng ký mới: email + password
-Integration với CraneManager để chọn container
-Status screen hiển thị tiến trình đăng ký
-Popup "Vui lòng solve captcha" chờ user confirm
-
-Bước 6.6: Implement SettingsViewController
-
-Tất cả settings như đã mô tả
-Test Telegram Connection button
-
-Bước 6.7: Implement LogsViewController
-
-TableView với realtime append
-Color coding: INFO=white, WARN=yellow, ERROR=red
-Auto-scroll to bottom
-
-### Phase 7: Watchdog Daemon
-
-Bước 7.1: Viết watchdog_daemon.c
-
-POSIX daemon
-Check ToriumBot process mỗi 60 giây
-Restart nếu không tìm thấy process
-
-Bước 7.2: Tạo LaunchDaemon plist
-
-RunAtLoad: true
-KeepAlive: true
-Install to: /Library/LaunchDaemons/
-
-Bước 7.3: Install script
-
-Copy daemon binary to /usr/local/bin/
-Copy plist to /Library/LaunchDaemons/
-launchctl load plist
-
-### Phase 8: Testing + Packaging
-
-Bước 8.1: Test từng component độc lập
-
-Test ToriumAPIClient với real Bearer token
-Test ProxyURLSession với proxy thật
-Test TelegramReporter
-
-Bước 8.2: Integration test
-
-Chạy full ad watching flow với 1 account
-Verify database được cập nhật đúng
-Verify Telegram nhận được thông báo
-
-Bước 8.3: Package IPA cho TrollStore
-
-Archive trong Xcode
-Export as IPA (Ad Hoc hoặc Development)
-Không cần valid certificate cho TrollStore
-
----
-
-## CONSTRAINTS BẮT BUỘC — KHÔNG ĐƯỢC VI PHẠM
-
-1. KHÔNG tự thêm thư viện ngoài GRDB.swift. Nếu muốn thêm thư viện khác, PHẢI dừng lại hỏi trước.
-2. KHÔNG dùng SwiftUI. Chỉ UIKit.
-3. KHÔNG thay đổi API endpoints hay field names đã cung cấp. Đây là data thật từ reverse engineering.
-4. KHÔNG hardcode Bearer token hay clerkId vào code. Luôn lấy từ database.
-5. KHÔNG rate limit quá 5 lần/giờ hoặc 120 lần/ngày.
-6. KHÔNG bỏ qua proxy verification trước mỗi action.
-7. KHÔNG gửi request khi proxy chết.
-8. Sau mỗi phase hoàn thành, output: ✅ [Phase X hoàn thành — các file đã tạo]
-9. Nếu gặp quyết định architecture quan trọng, DỪNG LẠI và hỏi trước khi tiếp tục.
-10. Viết comment tiếng Anh trong code, giải thích bằng tiếng Việt khi cần.
-
----
-
-## STOP CONDITIONS — DỪNG VÀ HỎI KHI
-
-- Cần tích hợp API ngoài ngoài dongvanfb.net và Telegram Bot API
-- Crane API không hoạt động như mong đợi — cần tìm cách khác
-- Cần thêm thư viện Swift Package mới
-- Gặp giới hạn của jailbreak rootful không biết cách vượt qua
-- File nào đó cần quyền đặc biệt chưa rõ
-- Có 2 cách implement khác nhau về kiến trúc
-
----
-
-## ACCEPTANCE CRITERIA — DONE KHI
-
-- [ ] App cài được qua TrollStore trên iPhone 6s iOS 15-16 palera1n rootful
-- [ ] Import được file accounts.txt format đúng
-- [ ] Tự động đăng nhập vào từng Crane container
-- [ ] Extract được Bearer token từ từng container
-- [ ] Xem ad tự động đúng 3-bước flow, không vượt rate limit
-- [ ] Proxy per-account hoạt động và verify trước mỗi action
-- [ ] Telegram nhận alert khi có lỗi
-- [ ] Telegram nhận báo cáo định kỳ đúng format
-- [ ] Watchdog daemon restart app khi crash
-- [ ] Backup button tạo file txt và gửi qua Telegram
-- [ ] Dashboard cập nhật realtime
-
----
-
-⚠️ AGENTIC WARNING: Prompt này cho một tool có system access thật trên iPhone jailbreak. Review kỹ scope locks và stop conditions trước khi chạy. Confirm đường dẫn file và permissions khớp với thiết bị thực tế. KHÔNG deploy LaunchDaemon mà không test trên device thật trước.
-
-🎯 Target: Google Antigravity (Agentic Coding Agent)
-💡 Prompt được tối ưu theo Template H+M kết hợp — front-load toàn bộ API data thật, kiến trúc chi tiết từng file, từng bước build tuần tự có checkpoint, stop conditions rõ ràng để agent không tự ý quyết định những chỗ quan trọng.
+## QUẢN LÝ DỮ LIỆU & GIAO DIỆN
+
+### Smart Multi-Format Parser:
+- Tự động nhận diện các định dạng file txt:
+  - `email|password|refresh_token|client_id` (dongvanfb)
+  - `email|password|refresh_token|client_id|proxy`
+  - `email|password|refresh_token|client_id|proxy|ref_code`
+  - `email|password|token|clerk_id|device_id|proxy` (acc có sẵn token)
+  - Hỗ trợ ký tự ngăn cách: `|`, `:`, Tab, và URL proxy dạng `http://user:pass@host:port`.
+- Hiển thị bảng **Preview Grid** lọc trùng email trước khi nạp vào SQLite.
+
+### Batch Registration Queue:
+- Chế độ đăng ký tuần tự: Tự chuyển container -> Tweak điền form -> User chạm Captcha -> Tweak điền OTP -> Lưu token -> Đếm ngược 3s chuyển acc tiếp.
+- Có nút **Tạm dừng / Tiếp tục** bất kỳ lúc nào.
+
+### Cài Đặt Tweak 1 Chạm:
+- Nhúng sẵn file `toriumhelper.deb` trong App Resources.
+- Nút "Cài đặt Tweak Hỗ trợ" trong tab Settings tự gọi `dpkg -i` qua quyền rootful của palera1n.
+
+### Telegram Bot (Send-Only 100%):
+- Cảnh báo tức thì khi: Proxy chết, Account 401, Account 403.
+- Báo cáo định kỳ mỗi X giờ.
+- **Smart Auto-Backup:** Tự động gửi file backup mã hoá về Telegram ngay khi thêm acc mới hoặc refresh token.

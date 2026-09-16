@@ -11,12 +11,12 @@ public struct DeviceSessionRequest: Codable {
     public let isRooted: Bool
     public let clerkId: String
 
-    public init(deviceId: String, clerkId: String) {
-        self.platform = "android"
+    public init(deviceId: String, clerkId: String, profile: DeviceProfile, appVersion: String) {
+        self.platform = profile.platform
         self.deviceId = deviceId
-        self.deviceModel = "V2452A"
-        self.osVersion = "16"
-        self.appVersion = "2.1.0"
+        self.deviceModel = profile.model
+        self.osVersion = profile.osVersion
+        self.appVersion = appVersion
         self.isRooted = false
         self.clerkId = clerkId
     }
@@ -56,10 +56,10 @@ public struct RewardedIntentStatusResponse: Codable {
 public struct AdRevenuePayload: Codable {
     public let currency: String         // "USD"
     public let precision: Int           // 3
-    public let valueMicros: Int         // 10092
+    public let valueMicros: Int         // randomized 8,120 to 24,350
     public let occurredAt: Int64        // current timestamp ms
     public let localDateKey: String     // "YYYY-MM-DD"
-    public let utcOffsetMinutes: Int    // 420 (UTC+7)
+    public let utcOffsetMinutes: Int    // calculated from proxy Geo-IP
 }
 
 public struct BoostRequest: Codable {
@@ -120,8 +120,8 @@ public enum ToriumAPIError: Error, LocalizedError {
 
 public final class ToriumAPIClient {
     public static let baseURL = "https://api.torium.network"
-    private static let otaVersion = "0a9f87c3-0a5f-4ed5-aefd-7a9004875813"
-    private static let appVersion = "2.1.0"
+    private static let defaultOtaVersion = "0a9f87c3-0a5f-4ed5-aefd-7a9004875813"
+    private static let defaultAppVersion = "2.1.0"
     private static let userAgent = "okhttp/4.12.0"
 
     private let account: Account
@@ -130,6 +130,14 @@ public final class ToriumAPIClient {
     public init(account: Account) {
         self.account = account
         self.session = ProxyURLSession.createSession(account: account, timeoutInterval: 30.0)
+    }
+
+    private var activeOtaVersion: String {
+        return DatabaseManager.shared.getSetting(key: "x_ota_version") ?? ToriumAPIClient.defaultOtaVersion
+    }
+
+    private var activeAppVersion: String {
+        return DatabaseManager.shared.getSetting(key: "x_app_version") ?? ToriumAPIClient.defaultAppVersion
     }
 
     // MARK: - Private Request Builder
@@ -151,8 +159,8 @@ public final class ToriumAPIClient {
         // Required headers
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(ToriumAPIClient.userAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue(ToriumAPIClient.appVersion, forHTTPHeaderField: "x-app-version")
-        request.setValue(ToriumAPIClient.otaVersion, forHTTPHeaderField: "x-ota-version")
+        request.setValue(activeAppVersion, forHTTPHeaderField: "x-app-version")
+        request.setValue(activeOtaVersion, forHTTPHeaderField: "x-ota-version")
         request.setValue("gzip", forHTTPHeaderField: "Accept-Encoding")
 
         if let deviceId = account.deviceId, !deviceId.isEmpty {
@@ -200,65 +208,34 @@ public final class ToriumAPIClient {
                     throw ToriumAPIError.serverError(statusCode: httpResponse.statusCode, message: errStr)
                 }
 
-                // Decode successful response
                 let decoder = JSONDecoder()
                 return try decoder.decode(T.self, from: data)
 
             } catch let error as ToriumAPIError {
-                // Do not retry on 401 or 403
                 if case .unauthorized = error { throw error }
                 if case .forbidden = error { throw error }
 
                 lastError = error
-                if attempt == 1 {
-                    DatabaseManager.shared.insertLog(Log(
-                        accountId: account.id,
-                        level: .warn,
-                        action: .general,
-                        message: "Attempt 1 failed: \(error.localizedDescription). Waiting 5s..."
-                    ))
-                    try? await Task.sleep(nanoseconds: 5_000_000_000)
-                } else if attempt == 2 {
-                    DatabaseManager.shared.insertLog(Log(
-                        accountId: account.id,
-                        level: .warn,
-                        action: .general,
-                        message: "Attempt 2 failed: \(error.localizedDescription). Waiting 10s..."
-                    ))
-                    try? await Task.sleep(nanoseconds: 10_000_000_000)
-                }
+                let sleepSeconds = (attempt == 1) ? 5 : 10
+                try? await Task.sleep(nanoseconds: UInt64(sleepSeconds) * 1_000_000_000)
             } catch {
                 lastError = error
-                if attempt == 1 {
-                    DatabaseManager.shared.insertLog(Log(
-                        accountId: account.id,
-                        level: .warn,
-                        action: .general,
-                        message: "Attempt 1 network error: \(error.localizedDescription). Waiting 5s..."
-                    ))
-                    try? await Task.sleep(nanoseconds: 5_000_000_000)
-                } else if attempt == 2 {
-                    DatabaseManager.shared.insertLog(Log(
-                        accountId: account.id,
-                        level: .warn,
-                        action: .general,
-                        message: "Attempt 2 network error: \(error.localizedDescription). Waiting 10s..."
-                    ))
-                    try? await Task.sleep(nanoseconds: 10_000_000_000)
-                }
+                let sleepSeconds = (attempt == 1) ? 5 : 10
+                try? await Task.sleep(nanoseconds: UInt64(sleepSeconds) * 1_000_000_000)
             }
         }
 
         throw lastError
     }
 
-    // MARK: - Endpoint 1: Register Device Session
+    // MARK: - Endpoint 1: Register Device Session with Anti-Sybil Profiler
 
     public func registerDeviceSession() async throws -> Bool {
         let deviceId = account.deviceId ?? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let clerkId = account.clerkId ?? ""
+        let profile = AntiSybilProfiler.shared.getProfile(for: account)
 
-        let payload = DeviceSessionRequest(deviceId: deviceId, clerkId: clerkId)
+        let payload = DeviceSessionRequest(deviceId: deviceId, clerkId: clerkId, profile: profile, appVersion: activeAppVersion)
         let bodyData = try JSONEncoder().encode(payload)
 
         let req = try makeRequest(path: "/device/session", method: "POST", body: bodyData, requiresAuth: false)
@@ -301,23 +278,21 @@ public final class ToriumAPIClient {
         return try await executeWithRetry(req, decodeType: RewardedIntentStatusResponse.self)
     }
 
-    // MARK: - Endpoint 7: Boost Mining (Step 3 Ad)
+    // MARK: - Endpoint 7: Boost Mining with Anti-Sybil Micro-Revenue & Geo-IP matching
 
     public func boostMining(verifiedIntentId: String) async throws -> BoostResponse {
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(secondsFromGMT: 7 * 3600) // UTC+7
-        let localDateKey = formatter.string(from: Date())
+        let offsetMinutes = AntiSybilProfiler.shared.calculateUtcOffsetMinutes(for: account)
+        let localDateKey = AntiSybilProfiler.shared.getLocalDateKey(offsetMinutes: offsetMinutes)
+        let randomValueMicros = AntiSybilProfiler.shared.generateRandomValueMicros()
 
         let revenue = AdRevenuePayload(
             currency: "USD",
             precision: 3,
-            valueMicros: 10092,
+            valueMicros: randomValueMicros,
             occurredAt: nowMs,
             localDateKey: localDateKey,
-            utcOffsetMinutes: 420
+            utcOffsetMinutes: offsetMinutes
         )
 
         let payload = BoostRequest(verifiedIntentId: verifiedIntentId, adRevenue: revenue)

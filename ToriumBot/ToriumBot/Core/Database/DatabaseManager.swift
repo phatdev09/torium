@@ -1,6 +1,37 @@
 import Foundation
 import SQLite3
 
+public struct ProxyPoolItem: Codable, Identifiable {
+    public var id: Int64?
+    public var host: String
+    public var port: Int
+    public var username: String?
+    public var password: String?
+    public var proto: String
+    public var isActive: Bool
+    public var lastUsedAt: Int64?
+
+    public init(
+        id: Int64? = nil,
+        host: String,
+        port: Int,
+        username: String? = nil,
+        password: String? = nil,
+        proto: String = "socks5",
+        isActive: Bool = true,
+        lastUsedAt: Int64? = nil
+    ) {
+        self.id = id
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.proto = proto
+        self.isActive = isActive
+        self.lastUsedAt = lastUsedAt
+    }
+}
+
 /// Thread-safe SQLite Database Manager for ToriumBot
 public final class DatabaseManager {
     public static let shared = DatabaseManager()
@@ -57,6 +88,7 @@ public final class DatabaseManager {
             proxy_password TEXT,
             proxy_protocol TEXT,
             container_id TEXT,
+            referral_code TEXT,
             is_active INTEGER DEFAULT 1,
             is_banned INTEGER DEFAULT 0,
             created_at INTEGER,
@@ -100,10 +132,26 @@ public final class DatabaseManager {
         );
         """
 
+        let createProxyPoolTable = """
+        CREATE TABLE IF NOT EXISTS proxy_pool (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            host TEXT NOT NULL,
+            port INTEGER NOT NULL,
+            username TEXT,
+            password TEXT,
+            protocol TEXT DEFAULT 'socks5',
+            is_active INTEGER DEFAULT 1,
+            last_used_at INTEGER
+        );
+        """
+
         execute(query: createAccountsTable)
+        // Migration: add referral_code to accounts if table already existed without it
+        execute(query: "ALTER TABLE accounts ADD COLUMN referral_code TEXT;")
         execute(query: createMiningStatsTable)
         execute(query: createLogsTable)
         execute(query: createSettingsTable)
+        execute(query: createProxyPoolTable)
     }
 
     private func insertDefaultSettings() {
@@ -114,7 +162,16 @@ public final class DatabaseManager {
             "timezone_offset": "420",
             "default_ad_interval_hours": "2",
             "human_delay_enabled": "true",
-            "auto_restart_enabled": "true"
+            "auto_restart_enabled": "true",
+            "master_referral_code": "",
+            "worker_mode": "eco",
+            "max_concurrent_workers": "3",
+            "sleep_simulator_enabled": "false",
+            "sleep_start_hour": "1",
+            "sleep_end_hour": "5",
+            "x_ota_version": "0a9f87c3-0a5f-4ed5-aefd-7a9004875813",
+            "x_app_version": "2.1.0",
+            "max_ad_yield_enabled": "true"
         ]
 
         for (key, val) in defaults {
@@ -128,9 +185,7 @@ public final class DatabaseManager {
         var errMsg: UnsafeMutablePointer<CChar>?
         if sqlite3_exec(db, query, nil, nil, &errMsg) != SQLITE_OK {
             if let error = errMsg {
-                let msg = String(cString: error)
-                print("SQL Error: \(msg) in query: \(query)")
-                sqlite3_free(errMsg)
+                sqlite3_free(error)
             }
         }
     }
@@ -140,7 +195,7 @@ public final class DatabaseManager {
     public func getAllAccounts() -> [Account] {
         return dbQueue.sync {
             var accounts: [Account] = []
-            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, is_active, is_banned, created_at, last_seen_at FROM accounts ORDER BY id ASC;"
+            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, referral_code, is_active, is_banned, created_at, last_seen_at FROM accounts ORDER BY id ASC;"
             var stmt: OpaquePointer?
 
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
@@ -156,7 +211,7 @@ public final class DatabaseManager {
     public func getActiveAccounts() -> [Account] {
         return dbQueue.sync {
             var accounts: [Account] = []
-            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE is_active = 1 AND is_banned = 0 ORDER BY id ASC;"
+            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, referral_code, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE is_active = 1 AND is_banned = 0 ORDER BY id ASC;"
             var stmt: OpaquePointer?
 
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
@@ -171,7 +226,7 @@ public final class DatabaseManager {
 
     public func getAccount(id: Int64) -> Account? {
         return dbQueue.sync {
-            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE id = ? LIMIT 1;"
+            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, referral_code, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE id = ? LIMIT 1;"
             var stmt: OpaquePointer?
             var account: Account?
 
@@ -188,7 +243,7 @@ public final class DatabaseManager {
 
     public func getAccount(email: String) -> Account? {
         return dbQueue.sync {
-            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE email = ? LIMIT 1;"
+            let query = "SELECT id, email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, referral_code, is_active, is_banned, created_at, last_seen_at FROM accounts WHERE email = ? LIMIT 1;"
             var stmt: OpaquePointer?
             var account: Account?
 
@@ -207,8 +262,8 @@ public final class DatabaseManager {
     public func insertAccount(_ acc: Account) -> Int64? {
         return dbQueue.sync {
             let query = """
-            INSERT INTO accounts (email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, is_active, is_banned, created_at, last_seen_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO accounts (email, password, bearer_token, clerk_id, device_id, proxy_host, proxy_port, proxy_username, proxy_password, proxy_protocol, container_id, referral_code, is_active, is_banned, created_at, last_seen_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """
             var stmt: OpaquePointer?
             var insertedId: Int64?
@@ -229,10 +284,11 @@ public final class DatabaseManager {
                 bindOptionalText(stmt, 9, acc.proxyPassword)
                 bindOptionalText(stmt, 10, acc.proxyProtocol)
                 bindOptionalText(stmt, 11, acc.containerId)
-                sqlite3_bind_int(stmt, 12, acc.isActive ? 1 : 0)
-                sqlite3_bind_int(stmt, 13, acc.isBanned ? 1 : 0)
-                sqlite3_bind_int64(stmt, 14, acc.createdAt)
-                sqlite3_bind_int64(stmt, 15, acc.lastSeenAt)
+                bindOptionalText(stmt, 12, acc.referralCode)
+                sqlite3_bind_int(stmt, 13, acc.isActive ? 1 : 0)
+                sqlite3_bind_int(stmt, 14, acc.isBanned ? 1 : 0)
+                sqlite3_bind_int64(stmt, 15, acc.createdAt)
+                sqlite3_bind_int64(stmt, 16, acc.lastSeenAt)
 
                 if sqlite3_step(stmt) == SQLITE_DONE {
                     insertedId = sqlite3_last_insert_rowid(db)
@@ -249,7 +305,7 @@ public final class DatabaseManager {
             let query = """
             UPDATE accounts SET email = ?, password = ?, bearer_token = ?, clerk_id = ?, device_id = ?,
             proxy_host = ?, proxy_port = ?, proxy_username = ?, proxy_password = ?, proxy_protocol = ?,
-            container_id = ?, is_active = ?, is_banned = ?, last_seen_at = ? WHERE id = ?;
+            container_id = ?, referral_code = ?, is_active = ?, is_banned = ?, last_seen_at = ? WHERE id = ?;
             """
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
@@ -268,10 +324,11 @@ public final class DatabaseManager {
                 bindOptionalText(stmt, 9, acc.proxyPassword)
                 bindOptionalText(stmt, 10, acc.proxyProtocol)
                 bindOptionalText(stmt, 11, acc.containerId)
-                sqlite3_bind_int(stmt, 12, acc.isActive ? 1 : 0)
-                sqlite3_bind_int(stmt, 13, acc.isBanned ? 1 : 0)
-                sqlite3_bind_int64(stmt, 14, acc.lastSeenAt)
-                sqlite3_bind_int64(stmt, 15, id)
+                bindOptionalText(stmt, 12, acc.referralCode)
+                sqlite3_bind_int(stmt, 13, acc.isActive ? 1 : 0)
+                sqlite3_bind_int(stmt, 14, acc.isBanned ? 1 : 0)
+                sqlite3_bind_int64(stmt, 15, acc.lastSeenAt)
+                sqlite3_bind_int64(stmt, 16, id)
 
                 sqlite3_step(stmt)
             }
@@ -377,62 +434,10 @@ public final class DatabaseManager {
                 bindOptionalInt64(stmt, 9, stats.lastCheckinAt)
                 bindOptionalInt64(stmt, 10, stats.nextAdAt)
                 bindOptionalInt64(stmt, 11, stats.nextCheckinAt)
+
                 sqlite3_step(stmt)
             }
             sqlite3_finalize(stmt)
-        }
-    }
-
-    public func get7DayStats(accountId: Int64) -> [MiningStats] {
-        return dbQueue.sync {
-            var list: [MiningStats] = []
-            let query = "SELECT id, account_id, date, ads_watched, ads_remaining_today, ads_remaining_hour, tor_balance, boost_rate, last_ad_at, last_checkin_at, next_ad_at, next_checkin_at FROM mining_stats WHERE account_id = ? ORDER BY date DESC LIMIT 7;"
-            var stmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_int64(stmt, 1, accountId)
-                while sqlite3_step(stmt) == SQLITE_ROW {
-                    list.append(parseMiningStatsRow(stmt: stmt))
-                }
-            }
-            sqlite3_finalize(stmt)
-            return list
-        }
-    }
-
-    public func getTodaySummary(date: String) -> (totalActive: Int, totalTor: Double, totalAdsWatched: Int, errorAccounts: Int) {
-        return dbQueue.sync {
-            let activeQuery = "SELECT COUNT(*) FROM accounts WHERE is_active = 1 AND is_banned = 0;"
-            var totalActive = 0
-            var stmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, activeQuery, -1, &stmt, nil) == SQLITE_OK {
-                if sqlite3_step(stmt) == SQLITE_ROW { totalActive = Int(sqlite3_column_int(stmt, 0)) }
-            }
-            sqlite3_finalize(stmt)
-
-            let statsQuery = "SELECT SUM(tor_balance), SUM(ads_watched) FROM mining_stats WHERE date = ?;"
-            var totalTor = 0.0
-            var totalAds = 0
-            if sqlite3_prepare_v2(db, statsQuery, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_text(stmt, 1, (date as NSString).utf8String, -1, nil)
-                if sqlite3_step(stmt) == SQLITE_ROW {
-                    totalTor = sqlite3_column_double(stmt, 0)
-                    totalAds = Int(sqlite3_column_int(stmt, 1))
-                }
-            }
-            sqlite3_finalize(stmt)
-
-            let errorQuery = "SELECT COUNT(DISTINCT account_id) FROM logs WHERE level = 'ERROR' AND created_at >= ?;"
-            let startOfDay = Int64(Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 * 1000)
-            var errorAccounts = 0
-            if sqlite3_prepare_v2(db, errorQuery, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_bind_int64(stmt, 1, startOfDay)
-                if sqlite3_step(stmt) == SQLITE_ROW {
-                    errorAccounts = Int(sqlite3_column_int(stmt, 0))
-                }
-            }
-            sqlite3_finalize(stmt)
-
-            return (totalActive, totalTor, totalAds, errorAccounts)
         }
     }
 
@@ -443,28 +448,32 @@ public final class DatabaseManager {
             let query = "INSERT INTO logs (account_id, level, action, message, created_at) VALUES (?, ?, ?, ?, ?);"
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
-                bindOptionalInt64(stmt, 1, log.accountId)
+                if let aid = log.accountId {
+                    sqlite3_bind_int64(stmt, 1, aid)
+                } else {
+                    sqlite3_bind_null(stmt, 1)
+                }
                 sqlite3_bind_text(stmt, 2, (log.level.rawValue as NSString).utf8String, -1, nil)
                 sqlite3_bind_text(stmt, 3, (log.action.rawValue as NSString).utf8String, -1, nil)
                 sqlite3_bind_text(stmt, 4, (log.message as NSString).utf8String, -1, nil)
                 sqlite3_bind_int64(stmt, 5, log.createdAt)
+
                 sqlite3_step(stmt)
             }
             sqlite3_finalize(stmt)
-        }
-        DispatchQueue.main.async { [weak self] in
-            self?.onNewLogAdded?(log)
+
+            onNewLogAdded?(log)
         }
     }
 
     public func getRecentLogs(limit: Int = 100, level: LogLevel? = nil) -> [Log] {
         return dbQueue.sync {
             var logs: [Log] = []
-            var query = "SELECT id, account_id, level, action, message, created_at FROM logs "
+            var query = "SELECT id, account_id, level, action, message, created_at FROM logs"
             if let lvl = level {
-                query += "WHERE level = '\(lvl.rawValue)' "
+                query += " WHERE level = '\(lvl.rawValue)'"
             }
-            query += "ORDER BY id DESC LIMIT \(limit);"
+            query += " ORDER BY id DESC LIMIT \(limit);"
 
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
@@ -483,6 +492,50 @@ public final class DatabaseManager {
         }
     }
 
+    // MARK: - Proxy Pool CRUD
+
+    public func getAvailableBackupProxy() -> ProxyPoolItem? {
+        return dbQueue.sync {
+            let query = "SELECT id, host, port, username, password, protocol, is_active, last_used_at FROM proxy_pool WHERE is_active = 1 ORDER BY last_used_at ASC LIMIT 1;"
+            var stmt: OpaquePointer?
+            var item: ProxyPoolItem?
+
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                if sqlite3_step(stmt) == SQLITE_ROW {
+                    let id = sqlite3_column_int64(stmt, 0)
+                    let host = String(cString: sqlite3_column_text(stmt, 1)!)
+                    let port = Int(sqlite3_column_int(stmt, 2))
+                    let user = sqlite3_column_text(stmt, 3).map { String(cString: $0) }
+                    let pass = sqlite3_column_text(stmt, 4).map { String(cString: $0) }
+                    let proto = String(cString: sqlite3_column_text(stmt, 5)!)
+                    let isActive = sqlite3_column_int(stmt, 6) == 1
+                    let lastUsed = sqlite3_column_type(stmt, 7) != SQLITE_NULL ? sqlite3_column_int64(stmt, 7) : nil
+                    item = ProxyPoolItem(id: id, host: host, port: port, username: user, password: pass, proto: proto, isActive: isActive, lastUsedAt: lastUsed)
+                }
+            }
+            sqlite3_finalize(stmt)
+            return item
+        }
+    }
+
+    public func insertBackupProxy(_ item: ProxyPoolItem) {
+        dbQueue.sync {
+            let query = "INSERT INTO proxy_pool (host, port, username, password, protocol, is_active, last_used_at) VALUES (?, ?, ?, ?, ?, ?, ?);"
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(stmt, 1, (item.host as NSString).utf8String, -1, nil)
+                sqlite3_bind_int(stmt, 2, Int32(item.port))
+                bindOptionalText(stmt, 3, item.username)
+                bindOptionalText(stmt, 4, item.password)
+                sqlite3_bind_text(stmt, 5, (item.proto as NSString).utf8String, -1, nil)
+                sqlite3_bind_int(stmt, 6, item.isActive ? 1 : 0)
+                bindOptionalInt64(stmt, 7, item.lastUsedAt)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
+    }
+
     // MARK: - Settings CRUD
 
     public func getSetting(key: String) -> String? {
@@ -490,11 +543,12 @@ public final class DatabaseManager {
             let query = "SELECT value FROM settings WHERE key = ? LIMIT 1;"
             var stmt: OpaquePointer?
             var val: String?
+
             if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
                 sqlite3_bind_text(stmt, 1, (key as NSString).utf8String, -1, nil)
                 if sqlite3_step(stmt) == SQLITE_ROW {
-                    if let cStr = sqlite3_column_text(stmt, 0) {
-                        val = String(cString: cStr)
+                    if let text = sqlite3_column_text(stmt, 0) {
+                        val = String(cString: text)
                     }
                 }
             }
@@ -548,10 +602,11 @@ public final class DatabaseManager {
         let proxyPassword = sqlite3_column_text(stmt, 9).map { String(cString: $0) }
         let proxyProtocol = sqlite3_column_text(stmt, 10).map { String(cString: $0) }
         let containerId = sqlite3_column_text(stmt, 11).map { String(cString: $0) }
-        let isActive = sqlite3_column_int(stmt, 12) == 1
-        let isBanned = sqlite3_column_int(stmt, 13) == 1
-        let createdAt = sqlite3_column_int64(stmt, 14)
-        let lastSeenAt = sqlite3_column_int64(stmt, 15)
+        let referralCode = sqlite3_column_text(stmt, 12).map { String(cString: $0) }
+        let isActive = sqlite3_column_int(stmt, 13) == 1
+        let isBanned = sqlite3_column_int(stmt, 14) == 1
+        let createdAt = sqlite3_column_int64(stmt, 15)
+        let lastSeenAt = sqlite3_column_int64(stmt, 16)
 
         return Account(
             id: id,
@@ -566,6 +621,7 @@ public final class DatabaseManager {
             proxyPassword: proxyPassword,
             proxyProtocol: proxyProtocol,
             containerId: containerId,
+            referralCode: referralCode,
             isActive: isActive,
             isBanned: isBanned,
             createdAt: createdAt,

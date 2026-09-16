@@ -28,3 +28,4 @@ DerivedData/
 
 # Dist outputs
 dist/Payload/
+dist/*.ipa

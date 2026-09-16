@@ -1,10 +1,37 @@
 import Foundation
 import CFNetwork
 
-/// Factory and utility for creating URLSessions routed through account-specific proxies
+/// Custom session delegate to handle HTTP 407 Proxy Authentication challenges
+final class ProxyAuthDelegate: NSObject, URLSessionTaskDelegate {
+    private let account: Account
+
+    init(account: Account) {
+        self.account = account
+        super.init()
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPProxy ||
+           challenge.protectionSpace.isProxy {
+            if let user = account.proxyUsername, let pass = account.proxyPassword, !user.isEmpty {
+                let credential = URLCredential(user: user, password: pass, persistence: .none)
+                completionHandler(.useCredential, credential)
+                return
+            }
+        }
+        completionHandler(.performDefaultHandling, nil)
+    }
+}
+
+/// Factory and utility for creating URLSessions routed cleanly through account-specific proxies with zero DNS leaks
 public final class ProxyURLSession {
 
-    /// Creates a URLSession configured with proxy settings for an Account
+    /// Creates a URLSession configured with proxy settings and authentication handler
     public static func createSession(
         account: Account,
         timeoutInterval: TimeInterval = 30.0
@@ -14,7 +41,6 @@ public final class ProxyURLSession {
         configuration.timeoutIntervalForResource = timeoutInterval
 
         guard let host = account.proxyHost, !host.isEmpty, let port = account.proxyPort else {
-            // Direct connection if no proxy configured
             return URLSession(configuration: configuration)
         }
 
@@ -22,7 +48,6 @@ public final class ProxyURLSession {
         let proto = (account.proxyProtocol ?? "socks5").lowercased()
 
         if proto == "socks4" || proto == "socks5" || proto == "socks" {
-            // Configure SOCKS Proxy
             proxyDict[kCFStreamPropertySOCKSProxyHost as String] = host
             proxyDict[kCFStreamPropertySOCKSProxyPort as String] = port
             proxyDict[kCFStreamPropertySOCKSVersion as String] = (proto == "socks4") ? kCFStreamSocketSOCKSVersion4 : kCFStreamSocketSOCKSVersion5
@@ -33,8 +58,8 @@ public final class ProxyURLSession {
             if let pass = account.proxyPassword, !pass.isEmpty {
                 proxyDict[kCFStreamPropertySOCKSPassword as String] = pass
             }
-        } else if proto == "https" {
-            // Configure HTTPS Proxy
+        } else {
+            // HTTP / HTTPS
             proxyDict[kCFNetworkProxiesHTTPEnable as String] = 1
             proxyDict[kCFNetworkProxiesHTTPProxy as String] = host
             proxyDict[kCFNetworkProxiesHTTPPort as String] = port
@@ -49,21 +74,10 @@ public final class ProxyURLSession {
             if let pass = account.proxyPassword, !pass.isEmpty {
                 proxyDict[kCFProxyPasswordKey as String] = pass
             }
-        } else {
-            // Default: HTTP Proxy
-            proxyDict[kCFNetworkProxiesHTTPEnable as String] = 1
-            proxyDict[kCFNetworkProxiesHTTPProxy as String] = host
-            proxyDict[kCFNetworkProxiesHTTPPort as String] = port
-
-            if let user = account.proxyUsername, !user.isEmpty {
-                proxyDict[kCFProxyUsernameKey as String] = user
-            }
-            if let pass = account.proxyPassword, !pass.isEmpty {
-                proxyDict[kCFProxyPasswordKey as String] = pass
-            }
         }
 
         configuration.connectionProxyDictionary = proxyDict
-        return URLSession(configuration: configuration)
+        let delegate = ProxyAuthDelegate(account: account)
+        return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 }

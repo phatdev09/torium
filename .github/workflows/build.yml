@@ -19,6 +19,16 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
 
+      - name: Package Companion Tweak Deb
+        run: |
+          python3 package_deb.py
+
+      - name: Build Watchdog Daemon Binary
+        run: |
+          xcrun -sdk iphoneos clang -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
+            -framework Foundation -o ToriumBot/Resources/watchdog_daemon \
+            ToriumBot/Daemon/watchdog_daemon.c || true
+
       - name: Build and Archive
         run: |
           xcodebuild -project ToriumBot/ToriumBot.xcodeproj \
@@ -36,6 +46,10 @@ jobs:
         run: |
           mkdir -p dist/Payload
           cp -r build/ToriumBot.xcarchive/Products/Applications/ToriumBot.app dist/Payload/
+          cp ToriumBot/Resources/toriumhelper.deb dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Resources/watchdog_daemon dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Daemon/install_daemon.sh dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Daemon/com.toriumbot.watchdog.plist dist/Payload/ToriumBot.app/ 2>/dev/null || true
           cd dist
           zip -r ToriumBot.ipa Payload
           ls -lh ToriumBot.ipa

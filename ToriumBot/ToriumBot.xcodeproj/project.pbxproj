@@ -37,6 +37,11 @@
 		1028 /* ImportAccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* ImportAccountViewController.swift */; };
 		1029 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* SettingsViewController.swift */; };
 		1030 /* LogsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* LogsViewController.swift */; };
+		1031 /* AntiSybilProfiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2033 /* AntiSybilProfiler.swift */; };
+		1032 /* WorkerPoolManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2034 /* WorkerPoolManager.swift */; };
+		1033 /* ImportParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* ImportParser.swift */; };
+		1034 /* CraneBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* CraneBridge.m */; };
+		1035 /* toriumhelper.deb in Resources */ = {isa = PBXBuildFile; fileRef = 2039 /* toriumhelper.deb */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +78,13 @@
 		2030 /* LogsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/UI/Logs/LogsViewController.swift; sourceTree = SOURCE_ROOT; };
 		2031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Resources/Info.plist; sourceTree = SOURCE_ROOT; };
 		2032 /* Entitlements.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Resources/Entitlements.plist; sourceTree = SOURCE_ROOT; };
+		2033 /* AntiSybilProfiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/Core/AntiSybil/AntiSybilProfiler.swift; sourceTree = SOURCE_ROOT; };
+		2034 /* WorkerPoolManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/Core/Mining/WorkerPoolManager.swift; sourceTree = SOURCE_ROOT; };
+		2035 /* ImportParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/Core/Auth/ImportParser.swift; sourceTree = SOURCE_ROOT; };
+		2036 /* CraneBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ToriumBot/Core/Container/CraneBridge.m; sourceTree = SOURCE_ROOT; };
+		2037 /* CraneBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ToriumBot/Core/Container/CraneBridge.h; sourceTree = SOURCE_ROOT; };
+		2038 /* ToriumBot-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Resources/ToriumBot-Bridging-Header.h; sourceTree = SOURCE_ROOT; };
+		2039 /* toriumhelper.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = Resources/toriumhelper.deb; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -118,6 +130,11 @@
 				2028 /* ImportAccountViewController.swift */,
 				2029 /* SettingsViewController.swift */,
 				2030 /* LogsViewController.swift */,
+				2033 /* AntiSybilProfiler.swift */,
+				2034 /* WorkerPoolManager.swift */,
+				2035 /* ImportParser.swift */,
+				2036 /* CraneBridge.m */,
+				2037 /* CraneBridge.h */,
 			);
 			name = ToriumBot;
 			sourceTree = "<group>";
@@ -127,6 +144,8 @@
 			children = (
 				2031 /* Info.plist */,
 				2032 /* Entitlements.plist */,
+				2038 /* ToriumBot-Bridging-Header.h */,
+				2039 /* toriumhelper.deb */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -139,6 +158,7 @@
 			buildConfigurationList = 4001 /* Build configuration list for PBXNativeTarget "ToriumBot" */;
 			buildPhases = (
 				5001 /* Sources */,
+				5002 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -211,10 +231,25 @@
 				1028 /* ImportAccountViewController.swift in Sources */,
 				1029 /* SettingsViewController.swift in Sources */,
 				1030 /* LogsViewController.swift in Sources */,
+				1031 /* AntiSybilProfiler.swift in Sources */,
+				1032 /* WorkerPoolManager.swift in Sources */,
+				1033 /* ImportParser.swift in Sources */,
+				1034 /* CraneBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1035 /* toriumhelper.deb in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		4002 /* Debug */ = {
@@ -238,6 +273,11 @@
 				TARGETED_DEVICE_FAMILY = "1";
 				INFOPLIST_FILE = "Resources/Info.plist";
 				CODE_SIGN_ENTITLEMENTS = "Resources/Entitlements.plist";
+				SWIFT_OBJC_BRIDGING_HEADER = "Resources/ToriumBot-Bridging-Header.h";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ToriumBot/**",
+				);
 			};
 			name = Debug;
 		};
@@ -262,6 +302,11 @@
 				TARGETED_DEVICE_FAMILY = "1";
 				INFOPLIST_FILE = "Resources/Info.plist";
 				CODE_SIGN_ENTITLEMENTS = "Resources/Entitlements.plist";
+				SWIFT_OBJC_BRIDGING_HEADER = "Resources/ToriumBot-Bridging-Header.h";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/ToriumBot/**",
+				);
 			};
 			name = Release;
 		};

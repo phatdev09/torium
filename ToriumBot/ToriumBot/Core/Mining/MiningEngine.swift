@@ -1,6 +1,7 @@
 import Foundation
+import Network
 
-/// Core automation engine orchestrating concurrent background mining and check-ins
+/// Core automation engine orchestrating concurrent background mining, worker pool regulation, and network resilience
 public final class MiningEngine {
     public static let shared = MiningEngine()
 
@@ -8,27 +9,59 @@ public final class MiningEngine {
     private var isProcessing: Bool = false
     private var engineTimer: Timer?
 
+    private let networkMonitor = NWPathMonitor()
+    public private(set) var isNetworkAvailable: Bool = true
+
     private let processingQueue = DispatchQueue(label: "com.toriumbot.miningengine", attributes: .concurrent)
     private var activeTasks: [Int64: Task<Void, Never>] = [:]
     private let tasksLock = NSLock()
 
-    private init() {}
+    private init() {
+        setupNetworkMonitoring()
+    }
+
+    // MARK: - Network Resilience (Apple NWPathMonitor)
+
+    private func setupNetworkMonitoring() {
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            let available = (path.status == .satisfied)
+            if self?.isNetworkAvailable != available {
+                self?.isNetworkAvailable = available
+                if available {
+                    DatabaseManager.shared.insertLog(Log(
+                        level: .info,
+                        action: .general,
+                        message: "🌐 Mạng Internet đã kết nối trở lại. Tự động tiếp tục chu trình cày."
+                    ))
+                } else {
+                    DatabaseManager.shared.insertLog(Log(
+                        level: .warn,
+                        action: .general,
+                        message: "⚠️ iPhone mất kết nối WiFi/4G! Tự động đóng băng các tác vụ cày ngầm."
+                    ))
+                }
+            }
+        }
+        let queue = DispatchQueue(label: "com.toriumbot.networkmonitor")
+        networkMonitor.start(queue: queue)
+    }
 
     // MARK: - Engine Lifecycle
 
     public func start() {
         guard !isRunning else { return }
         isRunning = true
+        WorkerPoolManager.shared.reloadSettings()
+
         DatabaseManager.shared.insertLog(Log(
             level: .info,
             action: .general,
-            message: "🚀 Mining Engine đã khởi động."
+            message: "🚀 Mining Engine đã khởi động [Chế độ: \(WorkerPoolManager.shared.currentMode == .eco ? "Eco 3-5 workers" : "Turbo")]."
         ))
 
         TelegramReporter.shared.startPeriodicReporting()
 
         DispatchQueue.main.async { [weak self] in
-            // Tick every 15 seconds to evaluate due accounts
             self?.engineTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { _ in
                 self?.evaluateAccounts()
             }
@@ -62,6 +95,9 @@ public final class MiningEngine {
 
     private func evaluateAccounts() {
         guard isRunning, !isProcessing else { return }
+        // Do not process accounts if entire device is offline
+        guard isNetworkAvailable else { return }
+
         isProcessing = true
 
         processingQueue.async { [weak self] in
@@ -69,10 +105,6 @@ public final class MiningEngine {
             defer { self.isProcessing = false }
 
             let accounts = DatabaseManager.shared.getActiveAccounts()
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.timeZone = TimeZone(secondsFromGMT: 7 * 3600)
-            let todayDate = formatter.string(from: Date())
 
             for account in accounts {
                 guard let accountId = account.id else { continue }
@@ -85,17 +117,27 @@ public final class MiningEngine {
                 }
                 self.tasksLock.unlock()
 
+                // Calculate today's date based on proxy offset
+                let offset = AntiSybilProfiler.shared.calculateUtcOffsetMinutes(for: account)
+                let todayDate = AntiSybilProfiler.shared.getLocalDateKey(offsetMinutes: offset)
+
                 let stats = DatabaseManager.shared.getStats(accountId: accountId, date: todayDate)
 
                 let adDue = Scheduler.isAdDue(stats: stats)
                 let checkinDue = Scheduler.isCheckinDue(stats: stats)
 
                 if adDue || checkinDue {
+                    // Check if worker slot can be acquired according to WorkerPool mode
                     let task = Task.detached(priority: .utility) {
+                        await WorkerPoolManager.shared.acquireWorkerSlot()
+                        defer {
+                            WorkerPoolManager.shared.releaseWorkerSlot()
+                            self.tasksLock.lock()
+                            self.activeTasks.removeValue(forKey: accountId)
+                            self.tasksLock.unlock()
+                        }
+
                         await self.processAccount(account: account, adDue: adDue, checkinDue: checkinDue, todayDate: todayDate)
-                        self.tasksLock.lock()
-                        self.activeTasks.removeValue(forKey: accountId)
-                        self.tasksLock.unlock()
                     }
 
                     self.tasksLock.lock()
@@ -111,18 +153,18 @@ public final class MiningEngine {
     private func processAccount(account: Account, adDue: Bool, checkinDue: Bool, todayDate: String) async {
         guard let accountId = account.id else { return }
 
-        // Step 1: Mandatory Proxy Verification
-        if let host = account.proxyHost, !host.isEmpty, let port = account.proxyPort {
-            let proxyAlive = await ProxyManager.shared.verifyProxy(account: account)
+        // Step 1: Proxy Verification with Auto-Failover to Backup Pool
+        if let host = account.proxyHost, !host.isEmpty, account.proxyPort != nil {
+            let proxyAlive = await ProxyManager.shared.verifyProxyWithFailover(account: account)
             if !proxyAlive {
                 DatabaseManager.shared.insertLog(Log(
                     accountId: accountId,
                     level: .error,
                     action: .proxyChange,
-                    message: "Proxy chết (\(host):\(port))! Bỏ qua account [\(account.email)]."
+                    message: "Proxy chết (\(host))! Tạm hoãn 30 phút cho account [\(account.email)]."
                 ))
-                TelegramReporter.shared.alertProxyDead(email: account.email, proxyHost: host, proxyPort: port)
-                return // Do NOT send request if proxy is dead
+                TelegramReporter.shared.alertProxyDead(email: account.email, proxyHost: host, proxyPort: account.proxyPort ?? 0)
+                return
             }
         }
 
@@ -132,7 +174,7 @@ public final class MiningEngine {
                 let checkinMgr = CheckInManager(account: account)
                 _ = try await checkinMgr.performCheckIn()
             } catch let err as ToriumAPIError {
-                handleToriumError(err, account: account)
+                await handleToriumError(err, account: account)
             } catch {
                 DatabaseManager.shared.insertLog(Log(
                     accountId: accountId,
@@ -149,7 +191,6 @@ public final class MiningEngine {
                 let watcher = AdWatcher(account: account)
                 let bucket = try await watcher.watchAd()
 
-                // Calculate and record next ad schedule
                 let intervalStr = DatabaseManager.shared.getSetting(key: "default_ad_interval_hours") ?? "2"
                 let intervalHours = Double(intervalStr) ?? 2.0
                 let humanDelayEnabled = DatabaseManager.shared.getSetting(key: "human_delay_enabled") == "true"
@@ -166,7 +207,7 @@ public final class MiningEngine {
                 }
 
             } catch let err as ToriumAPIError {
-                handleToriumError(err, account: account)
+                await handleToriumError(err, account: account)
             } catch {
                 DatabaseManager.shared.insertLog(Log(
                     accountId: accountId,
@@ -179,27 +220,32 @@ public final class MiningEngine {
         }
     }
 
-    // MARK: - Specialized Error Handling
+    // MARK: - Specialized Error Handling & Auto Re-Login
 
-    private func handleToriumError(_ error: ToriumAPIError, account: Account) {
+    private func handleToriumError(_ error: ToriumAPIError, account: Account) async {
         guard let accountId = account.id else { return }
 
         switch error {
         case .unauthorized:
             DatabaseManager.shared.insertLog(Log(
                 accountId: accountId,
-                level: .error,
+                level: .warn,
                 action: .login,
-                message: "Token 401 Unauthorized. Cần refresh token!"
+                message: "Token 401 Unauthorized [\(account.email)]. Bắt đầu quy trình Auto Re-Login..."
             ))
-            TelegramReporter.shared.alertTokenNeedsRefresh(email: account.email)
+
+            // Attempt Auto Re-login
+            let reloginSuccess = await AccountRegistrar.shared.performAutoRelogin(account: account)
+            if !reloginSuccess {
+                TelegramReporter.shared.alertTokenNeedsRefresh(email: account.email)
+            }
 
         case .forbidden:
             DatabaseManager.shared.insertLog(Log(
                 accountId: accountId,
                 level: .error,
                 action: .general,
-                message: "Response 403 Forbidden. Account có thể bị ban!"
+                message: "Response 403 Forbidden. Account [\(account.email)] có thể bị ban!"
             ))
             var updated = account
             updated.isBanned = true

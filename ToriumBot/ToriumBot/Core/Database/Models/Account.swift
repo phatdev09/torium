@@ -1,6 +1,6 @@
 import Foundation
 
-/// Represents a Torium farming account with authentication, container, and proxy details.
+/// Represents a Torium farming account with authentication, container, proxy, and referral details.
 public struct Account: Codable, Identifiable, Equatable {
     public var id: Int64?
     public var email: String
@@ -14,6 +14,7 @@ public struct Account: Codable, Identifiable, Equatable {
     public var proxyPassword: String?
     public var proxyProtocol: String? // "http", "https", "socks4", "socks5"
     public var containerId: String?   // Crane container identifier
+    public var referralCode: String?  // Optional referral code used on registration
     public var isActive: Bool
     public var isBanned: Bool
     public var createdAt: Int64
@@ -32,6 +33,7 @@ public struct Account: Codable, Identifiable, Equatable {
         proxyPassword: String? = nil,
         proxyProtocol: String? = nil,
         containerId: String? = nil,
+        referralCode: String? = nil,
         isActive: Bool = true,
         isBanned: Bool = false,
         createdAt: Int64 = Int64(Date().timeIntervalSince1970 * 1000),
@@ -49,6 +51,7 @@ public struct Account: Codable, Identifiable, Equatable {
         self.proxyPassword = proxyPassword
         self.proxyProtocol = proxyProtocol
         self.containerId = containerId
+        self.referralCode = referralCode
         self.isActive = isActive
         self.isBanned = isBanned
         self.createdAt = createdAt
@@ -66,7 +69,7 @@ public struct Account: Codable, Identifiable, Equatable {
     }
 
     /// Generates standard backup string:
-    /// email|password|bearer_token|clerk_id|device_id|proxy_protocol|proxy_host|proxy_port|proxy_username|proxy_password
+    /// email|password|bearer_token|clerk_id|device_id|proxy_protocol|proxy_host|proxy_port|proxy_username|proxy_password|referral_code
     public var backupLine: String {
         let bToken = bearerToken ?? ""
         let cId = clerkId ?? ""
@@ -76,6 +79,7 @@ public struct Account: Codable, Identifiable, Equatable {
         let pPort = proxyPort != nil ? String(proxyPort!) : ""
         let pUser = proxyUsername ?? ""
         let pPass = proxyPassword ?? ""
-        return "\(email)|\(password)|\(bToken)|\(cId)|\(dId)|\(pProto)|\(pHost)|\(pPort)|\(pUser)|\(pPass)"
+        let ref = referralCode ?? ""
+        return "\(email)|\(password)|\(bToken)|\(cId)|\(dId)|\(pProto)|\(pHost)|\(pPort)|\(pUser)|\(pPass)|\(ref)"
     }
 }

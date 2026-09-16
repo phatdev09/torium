@@ -1,0 +1,9 @@
+Package: com.toriumbot.helper
+Name: ToriumHelper
+Depends: mobilesubstrate (>= 0.9.5000)
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Companion automation tweak for ToriumBot: In-app proxy swizzling, form auto-fill, OTP injection & token capture.
+Maintainer: ToriumBot Team
+Author: ToriumBot
+Section: Tweaks
