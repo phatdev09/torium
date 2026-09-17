@@ -425,6 +425,9 @@ public final class AccountRegistrar {
         } catch {
             return nil
         }
+        return nil
+    }
+
     // MARK: - Direct Sign In (No OTP Required)
 
     /// Signs in existing account without requesting OTP, auto-authenticates into Crane container, and extracts token
@@ -441,7 +444,7 @@ public final class AccountRegistrar {
         // Check if token already exists & active
         if let token = account.bearerToken, !token.isEmpty {
             onStepUpdate("Tài khoản đã có token. Kiểm tra trạng thái...")
-            if (try? await ToriumAPIClient.shared.checkMiningStatus(account: account)) != nil {
+            if (try? await ToriumAPIClient(account: account).getSessionStatus()) != nil {
                 onStepUpdate("Token đang hoạt động tốt! Sẵn sàng đào.")
                 return account
             }
