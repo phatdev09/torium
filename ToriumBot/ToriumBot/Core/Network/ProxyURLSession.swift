@@ -16,8 +16,9 @@ final class ProxyAuthDelegate: NSObject, URLSessionTaskDelegate {
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPProxy ||
-           challenge.protectionSpace.isProxy {
+        if challenge.protectionSpace.isProxy ||
+           challenge.protectionSpace.authenticationMethod == "NSURLAuthenticationMethodHTTPProxy" ||
+           challenge.protectionSpace.authenticationMethod == "NSURLAuthenticationMethodHTTPSProxy" {
             if let user = account.proxyUsername, let pass = account.proxyPassword, !user.isEmpty {
                 let credential = URLCredential(user: user, password: pass, persistence: .none)
                 completionHandler(.useCredential, credential)

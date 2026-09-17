@@ -121,6 +121,33 @@ public final class TelegramReporter {
 
     // MARK: - Immediate Alert Templates
 
+    public enum AlertNotificationType {
+        case account403
+        case proxyDead
+        case rateLimited
+        case banRisk
+    }
+
+    public func sendAlert(type: AlertNotificationType, details: String) {
+        let title: String
+        switch type {
+        case .account403:
+            title = "🚫 [ToriumBot] 403 Forbidden / Account Banned"
+        case .proxyDead:
+            title = "⚠️ [ToriumBot] Proxy Connection Failed"
+        case .rateLimited:
+            title = "⏳ [ToriumBot] Rate Limited (429)"
+        case .banRisk:
+            title = "🚨 [ToriumBot] Ban Risk Detected"
+        }
+        let text = """
+        \(title)
+        📋 Chi tiết: \(details)
+        ⏰ \(currentUTC7String())
+        """
+        Task { _ = await sendMessage(text: text) }
+    }
+
     public func alertAccountError(email: String, errorMessage: String) {
         let text = """
         🔴 [ToriumBot] Account bị lỗi
@@ -228,5 +255,39 @@ public final class TelegramReporter {
     public func stopPeriodicReporting() {
         reportTimer?.invalidate()
         reportTimer = nil
+    }
+
+    public func restartPeriodicReportingIfRunning() {
+        if reportTimer != nil {
+            startPeriodicReporting()
+        }
+    }
+
+    public func sendTestMessage(completion: @escaping (Bool, String) -> Void) {
+        Task {
+            let testText = "🔔 [ToriumBot] Tin nhắn kiểm tra kết nối thành công!\n⏰ \(self.currentUTC7String())"
+            let ok = await self.sendMessage(text: testText)
+            DispatchQueue.main.async {
+                if ok {
+                    completion(true, "Đã gửi tin nhắn test thành công tới Telegram!")
+                } else {
+                    completion(false, "Không thể gửi tin nhắn. Vui lòng kiểm tra lại Bot Token và Chat ID.")
+                }
+            }
+        }
+    }
+
+    public func sendManualBackup() {
+        Task {
+            let accounts = DatabaseManager.shared.getAllAccounts()
+            var backupText = "# TORIUM BOT ACCOUNT BACKUP\n# Exported: \(self.currentUTC7String())\n# Total Accounts: \(accounts.count)\n\n"
+            for acc in accounts {
+                backupText += "\(acc.email):\(acc.password):\(acc.craneContainerId):\(acc.proxyHost ?? ""):\(acc.proxyPort.map(String.init) ?? ""):\(acc.proxyUsername ?? ""):\(acc.proxyPassword ?? "")\n"
+            }
+            if let data = backupText.data(using: .utf8) {
+                let filename = "torium_backup_\(Int(Date().timeIntervalSince1970)).txt"
+                _ = await self.sendDocument(data: data, filename: filename, caption: "📦 [ToriumBot] Tự động sao lưu dữ liệu tài khoản (\(accounts.count) tài khoản)")
+            }
+        }
     }
 }

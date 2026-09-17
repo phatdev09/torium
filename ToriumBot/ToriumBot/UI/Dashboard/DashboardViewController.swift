@@ -510,7 +510,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         }
         let account = accounts[indexPath.row]
         let stats = account.id != nil ? statsMap[account.id!] : nil
-        cell.configure(account: account, stats: stats)
+        cell.configure(with: account, stats: stats)
         return cell
     }
 

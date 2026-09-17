@@ -31,6 +31,12 @@ typedef NS_ENUM(NSInteger, CraneContainerPathType) {
 /// Launches the app using private iOS workspace API
 + (BOOL)launchApplicationWithIdentifier:(NSString*)bundleId NS_SWIFT_NAME(launchApplication(withIdentifier:));
 
+/// Safely runs a shell command using dynamic dlsym without compiler restrictions
++ (void)runShellCommand:(NSString*)command NS_SWIFT_NAME(runShellCommand(_:));
+
+/// Terminates running instances of the Torium app
++ (void)terminateToriumApp;
+
 @end
 
 NS_ASSUME_NONNULL_END

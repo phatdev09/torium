@@ -387,6 +387,62 @@ public final class DatabaseManager {
 
     // MARK: - MiningStats CRUD
 
+    public struct TodaySummary {
+        public let totalActive: Int
+        public let errorAccounts: Int
+        
+        public init(totalActive: Int, errorAccounts: Int) {
+            self.totalActive = totalActive
+            self.errorAccounts = errorAccounts
+        }
+    }
+
+    public func getTodaySummary(date: String) -> TodaySummary {
+        let accounts = getAllAccounts()
+        let active = accounts.filter { $0.isActive && !$0.isBanned }.count
+        let errors = accounts.filter { !$0.isActive || $0.isBanned }.count
+        return TodaySummary(totalActive: active, errorAccounts: errors)
+    }
+
+    public func getMiningStats(accountId: Int64) -> MiningStats? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(secondsFromGMT: 7 * 3600)
+        let today = formatter.string(from: Date())
+        if let todayStats = getStats(accountId: accountId, date: today) {
+            return todayStats
+        }
+        return dbQueue.sync {
+            let query = "SELECT id, account_id, date, ads_watched, ads_remaining_today, ads_remaining_hour, tor_balance, boost_rate, last_ad_at, last_checkin_at, next_ad_at, next_checkin_at FROM mining_stats WHERE account_id = ? ORDER BY date DESC LIMIT 1;"
+            var stmt: OpaquePointer?
+            var stats: MiningStats?
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_int64(stmt, 1, accountId)
+                if sqlite3_step(stmt) == SQLITE_ROW {
+                    stats = parseMiningStatsRow(stmt: stmt)
+                }
+            }
+            sqlite3_finalize(stmt)
+            return stats
+        }
+    }
+
+    public func get7DayStats(accountId: Int64) -> [MiningStats] {
+        return dbQueue.sync {
+            var list: [MiningStats] = []
+            let query = "SELECT id, account_id, date, ads_watched, ads_remaining_today, ads_remaining_hour, tor_balance, boost_rate, last_ad_at, last_checkin_at, next_ad_at, next_checkin_at FROM mining_stats WHERE account_id = ? ORDER BY date DESC LIMIT 7;"
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_int64(stmt, 1, accountId)
+                while sqlite3_step(stmt) == SQLITE_ROW {
+                    list.append(parseMiningStatsRow(stmt: stmt))
+                }
+            }
+            sqlite3_finalize(stmt)
+            return list
+        }
+    }
+
     public func getStats(accountId: Int64, date: String) -> MiningStats? {
         return dbQueue.sync {
             let query = "SELECT id, account_id, date, ads_watched, ads_remaining_today, ads_remaining_hour, tor_balance, boost_rate, last_ad_at, last_checkin_at, next_ad_at, next_checkin_at FROM mining_stats WHERE account_id = ? AND date = ? LIMIT 1;"

@@ -14,12 +14,32 @@
 #define TORIUM_BUNDLE_ID "com.toriumbot.app"
 #define LOG_TAG "ToriumWatchdog"
 
+#include <dlfcn.h>
+#include <sys/wait.h>
+
 extern char **environ;
+
+static int run_cmd(const char *cmd) {
+    if (!cmd || strlen(cmd) == 0) return -1;
+    typedef int (*sys_fn)(const char *);
+    sys_fn sys = (sys_fn)dlsym(RTLD_DEFAULT, "system");
+    if (sys) {
+        return sys(cmd);
+    }
+    pid_t pid;
+    const char *argv[] = {"sh", "-c", cmd, NULL};
+    if (posix_spawn(&pid, "/bin/sh", NULL, NULL, (char* const*)argv, environ) == 0) {
+        int status;
+        waitpid(pid, &status, 0);
+        return WEXITSTATUS(status);
+    }
+    return -1;
+}
 
 // Checks if ToriumBot process is running via pgrep or heartbeat file
 int is_toriumbot_alive() {
     // 1. Check process table via pgrep
-    int ret = system("pgrep -x ToriumBot > /dev/null 2>&1");
+    int ret = run_cmd("pgrep -x ToriumBot > /dev/null 2>&1");
     if (ret == 0) {
         // Process exists, now verify heartbeat staleness
         struct stat st;
@@ -40,10 +60,10 @@ void respawn_toriumbot() {
     syslog(LOG_NOTICE, "Respawning ToriumBot (%s)...", TORIUM_BUNDLE_ID);
     
     // Attempt 1: Using uiopen / open command on jailbroken device
-    int res = system("uiopen --bundle com.toriumbot.app > /dev/null 2>&1");
+    int res = run_cmd("uiopen --bundle com.toriumbot.app > /dev/null 2>&1");
     if (res != 0) {
         // Attempt 2: Using openURL fallback
-        system("open com.toriumbot.app > /dev/null 2>&1");
+        run_cmd("open com.toriumbot.app > /dev/null 2>&1");
     }
 }
 

@@ -8,8 +8,11 @@ public final class AccountRegistrar {
     public enum RegistrationStep: Equatable {
         case idle
         case switchingContainer(String)
+        case openingContainer
         case fillingForm
+        case fillingCredentials
         case waitingForCaptcha
+        case waitingForUserCaptcha
         case fetchingOTP
         case submittingOTP
         case extractingToken
@@ -105,13 +108,13 @@ public final class AccountRegistrar {
                 ))
                 cleanResultJSON()
                 // Terminate app to preserve memory
-                system("killall -9 Torium 2>/dev/null")
+                CraneBridge.terminateToriumApp()
                 return true
             }
         }
 
         // Terminate app if timeout
-        system("killall -9 Torium 2>/dev/null")
+        CraneBridge.terminateToriumApp()
         return false
     }
 
@@ -148,6 +151,31 @@ public final class AccountRegistrar {
     }
 
     // MARK: - Single Account Registration
+
+    public func startRegistration(
+        email: String,
+        password: String,
+        credential: DongVanCredential?,
+        containerId: String,
+        onStepUpdate: @escaping (RegistrationStep) -> Void,
+        onRequestCaptchaSolve: @escaping (@escaping () -> Void) -> Void
+    ) async throws -> Account {
+        let newAccount = Account(
+            email: email,
+            password: password,
+            craneContainerId: containerId,
+            isActive: true
+        )
+        let insertedId = DatabaseManager.shared.insertAccount(newAccount)
+        var acc = newAccount
+        acc.id = insertedId
+        return try await registerAccount(
+            account: acc,
+            credential: credential,
+            onStepUpdate: onStepUpdate,
+            onRequestCaptchaSolve: onRequestCaptchaSolve
+        )
+    }
 
     public func registerAccount(
         account: Account,

@@ -62,7 +62,7 @@
 
 + (void)switchContainer:(NSString*)containerId forApp:(NSString*)bundleId {
     // Step 1: Terminate running app instances to avoid cache corruption
-    system("killall -9 Torium 2>/dev/null");
+    [self terminateToriumApp];
     
     // Step 2: Switch active container in Crane
     id mgr = [self getCraneManagerInstance];
@@ -114,6 +114,27 @@
         }
     }
     return NO;
+}
+
++ (void)runShellCommand:(NSString*)command {
+    if (!command || command.length == 0) return;
+    typedef int (*sys_fn)(const char *);
+    sys_fn sys = (sys_fn)dlsym(RTLD_DEFAULT, "system");
+    if (sys) {
+        sys([command UTF8String]);
+        return;
+    }
+    pid_t pid;
+    const char *argv[] = {"sh", "-c", [command UTF8String], NULL};
+    extern char **environ;
+    if (posix_spawn(&pid, "/bin/sh", NULL, NULL, (char* const*)argv, environ) == 0) {
+        int status;
+        waitpid(pid, &status, 0);
+    }
+}
+
++ (void)terminateToriumApp {
+    [self runShellCommand:@"killall -9 Torium 2>/dev/null"];
 }
 
 @end

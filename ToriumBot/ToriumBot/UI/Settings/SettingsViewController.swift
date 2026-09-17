@@ -307,7 +307,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         DispatchQueue.global(qos: .userInitiated).async {
             let bundleDeb = Bundle.main.path(forResource: "toriumhelper", ofType: "deb") ?? ""
             let cmd = "dpkg -i '\(bundleDeb)' 2>/dev/null || dpkg -i /Applications/ToriumBot.app/toriumhelper.deb 2>/dev/null || dpkg -i /var/jb/Applications/ToriumBot.app/toriumhelper.deb 2>/dev/null"
-            system(cmd)
+            CraneBridge.runShellCommand(cmd)
             DispatchQueue.main.async {
                 alert.dismiss(animated: true) {
                     let doneAlert = UIAlertController(title: "Hoàn Tất", message: "Tweak ToriumHelper đã được cài đặt vào hệ thống. Vui lòng respring nếu cần!", preferredStyle: .alert)
@@ -336,7 +336,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
 
     @objc private func handleTestTelegram() {
         saveSettings()
-        TelegramReporter.shared.sendTestMessage { [weak self] success, msg in
+        TelegramReporter.shared.sendTestMessage { [weak self] (success: Bool, msg: String) in
             let alert = UIAlertController(title: success ? "Thành Công" : "Thất Bại", message: msg, preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default))
             self?.present(alert, animated: true)

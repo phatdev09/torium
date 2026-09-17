@@ -141,7 +141,7 @@ public final class AddAccountViewController: UIViewController, UIPickerViewDataS
                             self?.updateStepUI(step: step)
                         }
                     },
-                    onRequestCaptchaSolve: { [weak self] completion in
+                    onRequestCaptchaSolve: { [weak self] (completion: @escaping () -> Void) in
                         DispatchQueue.main.async {
                             let alert = UIAlertController(
                                 title: "Giải Captcha Cloudflare",
