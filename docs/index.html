@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ToriumBot — Hướng Dẫn Kết Nối Telegram Notifications</title>
   <meta name="description" content="Hướng dẫn chi tiết từng bước thiết lập Bot Telegram, lấy Bot Token và Chat ID để nhận thông báo tự động từ ToriumBot trên iPhone iOS.">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -46,10 +48,28 @@
 
     /* Header */
     header {
-      padding: 40px 0 24px;
+      padding: 36px 0 24px;
       text-align: center;
       border-bottom: 1px solid var(--card-border);
       margin-bottom: 32px;
+    }
+
+    .logo-wrapper {
+      margin-bottom: 18px;
+    }
+
+    .header-logo {
+      width: 92px;
+      height: 92px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(201, 168, 76, 0.35), 0 0 20px rgba(34, 211, 238, 0.2);
+      border: 2px solid rgba(201, 168, 76, 0.6);
+      display: inline-block;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .header-logo:hover {
+      transform: scale(1.08) rotate(-2deg);
     }
 
     .badge {
@@ -314,6 +334,9 @@
 
   <div class="container">
     <header>
+      <div class="logo-wrapper">
+        <img src="logo.png" alt="ToriumBot Official Logo" class="header-logo">
+      </div>
       <div class="badge">
         <span class="badge-dot"></span>
         ToriumBot v2.4.0 • Hướng Dẫn Chính Thức

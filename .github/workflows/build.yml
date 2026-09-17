@@ -50,6 +50,10 @@ jobs:
           cp ToriumBot/Resources/watchdog_daemon dist/Payload/ToriumBot.app/ 2>/dev/null || true
           cp ToriumBot/Daemon/install_daemon.sh dist/Payload/ToriumBot.app/ 2>/dev/null || true
           cp ToriumBot/Daemon/com.toriumbot.watchdog.plist dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Resources/AppIcon*.png dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Resources/app_logo*.png dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Resources/icon.png dist/Payload/ToriumBot.app/ 2>/dev/null || true
+          cp ToriumBot/Resources/iTunesArtwork* dist/Payload/ToriumBot.app/ 2>/dev/null || true
           cd dist
           zip -r ToriumBot.ipa Payload
           ls -lh ToriumBot.ipa

@@ -6,6 +6,13 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
     private let scrollView = UIScrollView()
     private let contentView = UIView()
 
+    // Header Brand Section
+    private let headerCard = UIView()
+    private let headerLogoImageView = UIImageView()
+    private let headerTitleLabel = UILabel()
+    private let headerSubtitleLabel = UILabel()
+    private let headerBadgeLabel = UILabel()
+
     // Referral & Anti-Sybil Section
     private let referralCard = UIView()
     private let masterRefField = UITextField()
@@ -49,6 +56,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Lưu", style: .done, target: self, action: #selector(saveSettings))
 
         setupScrollView()
+        setupHeaderCard()
         setupReferralSection()
         setupCaptchaSection()
         setupAutomationSection()
@@ -74,6 +82,65 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+        ])
+    }
+
+    private func setupHeaderCard() {
+        headerCard.translatesAutoresizingMaskIntoConstraints = false
+        headerCard.backgroundColor = ToriumTheme.darkNavyCard
+        headerCard.layer.cornerRadius = 14
+        headerCard.layer.borderWidth = 1
+        headerCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        contentView.addSubview(headerCard)
+
+        headerLogoImageView.translatesAutoresizingMaskIntoConstraints = false
+        headerLogoImageView.image = UIImage.toriumLogo
+        headerLogoImageView.contentMode = .scaleAspectFit
+        headerLogoImageView.layer.cornerRadius = 8
+        headerLogoImageView.clipsToBounds = true
+        headerLogoImageView.layer.borderWidth = 1
+        headerLogoImageView.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.5).cgColor
+
+        headerTitleLabel.text = "TORIUMBOT SUITE"
+        headerTitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .black)
+        headerTitleLabel.textColor = ToriumTheme.accentGold
+
+        headerSubtitleLabel.text = "TrollStore & Jailbreak Rootful Core Engine"
+        headerSubtitleLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+        headerSubtitleLabel.textColor = ToriumTheme.textSecondary
+
+        headerBadgeLabel.text = " ⚡ EXPERT v1.0 "
+        headerBadgeLabel.font = UIFont.monospacedSystemFont(ofSize: 9, weight: .bold)
+        headerBadgeLabel.textColor = ToriumTheme.cyanHighlight
+        headerBadgeLabel.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.12)
+        headerBadgeLabel.layer.cornerRadius = 4
+        headerBadgeLabel.clipsToBounds = true
+
+        let textStack = UIStackView(arrangedSubviews: [headerTitleLabel, headerSubtitleLabel])
+        textStack.axis = .vertical
+        textStack.spacing = 2
+        textStack.alignment = .leading
+
+        let topRow = UIStackView(arrangedSubviews: [headerLogoImageView, textStack, headerBadgeLabel])
+        topRow.axis = .horizontal
+        topRow.spacing = 10
+        topRow.alignment = .center
+        topRow.translatesAutoresizingMaskIntoConstraints = false
+        headerCard.addSubview(topRow)
+
+        NSLayoutConstraint.activate([
+            headerCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            headerCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            headerCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            headerCard.heightAnchor.constraint(equalToConstant: 62),
+
+            headerLogoImageView.widthAnchor.constraint(equalToConstant: 40),
+            headerLogoImageView.heightAnchor.constraint(equalToConstant: 40),
+
+            topRow.topAnchor.constraint(equalTo: headerCard.topAnchor, constant: 10),
+            topRow.leadingAnchor.constraint(equalTo: headerCard.leadingAnchor, constant: 12),
+            topRow.trailingAnchor.constraint(equalTo: headerCard.trailingAnchor, constant: -12),
+            topRow.bottomAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: -10)
         ])
     }
 
@@ -105,7 +172,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         referralCard.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            referralCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            referralCard.topAnchor.constraint(equalTo: headerCard.bottomAnchor, constant: 10),
             referralCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             referralCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 

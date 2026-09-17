@@ -44,6 +44,7 @@
 		1035 /* toriumhelper.deb in Resources */ = {isa = PBXBuildFile; fileRef = 2039 /* toriumhelper.deb */; };
 		1036 /* HardwareScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* HardwareScannerViewController.swift */; };
 		1037 /* HardwareOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2041 /* HardwareOptimizer.swift */; };
+		1038 /* app_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 2042 /* app_logo.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -89,6 +90,7 @@
 		2039 /* toriumhelper.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = Resources/toriumhelper.deb; sourceTree = SOURCE_ROOT; };
 		2040 /* HardwareScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/UI/Dashboard/HardwareScannerViewController.swift; sourceTree = SOURCE_ROOT; };
 		2041 /* HardwareOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToriumBot/Core/Hardware/HardwareOptimizer.swift; sourceTree = SOURCE_ROOT; };
+		2042 /* app_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/app_logo.png; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -152,6 +154,7 @@
 				2032 /* Entitlements.plist */,
 				2038 /* ToriumBot-Bridging-Header.h */,
 				2039 /* toriumhelper.deb */,
+				2042 /* app_logo.png */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -254,6 +257,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1035 /* toriumhelper.deb in Resources */,
+				1038 /* app_logo.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

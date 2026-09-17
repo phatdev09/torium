@@ -43,13 +43,15 @@ public final class HardwareScannerViewController: UIViewController {
         radarContainer.backgroundColor = ToriumTheme.darkNavyCard
         radarContainer.layer.cornerRadius = 36
         radarContainer.layer.borderWidth = 1.5
-        radarContainer.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.4).cgColor
+        radarContainer.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.6).cgColor
+        radarContainer.clipsToBounds = true
         view.addSubview(radarContainer)
 
         radarIconView.translatesAutoresizingMaskIntoConstraints = false
-        radarIconView.image = UIImage(systemName: "cpu.fill")
-        radarIconView.tintColor = ToriumTheme.cyanHighlight
+        radarIconView.image = UIImage.toriumLogo ?? UIImage(systemName: "cpu.fill")
         radarIconView.contentMode = .scaleAspectFit
+        radarIconView.layer.cornerRadius = 10
+        radarIconView.clipsToBounds = true
         radarContainer.addSubview(radarIconView)
 
         // Titles
@@ -116,8 +118,8 @@ public final class HardwareScannerViewController: UIViewController {
 
             radarIconView.centerXAnchor.constraint(equalTo: radarContainer.centerXAnchor),
             radarIconView.centerYAnchor.constraint(equalTo: radarContainer.centerYAnchor),
-            radarIconView.widthAnchor.constraint(equalToConstant: 36),
-            radarIconView.heightAnchor.constraint(equalToConstant: 36),
+            radarIconView.widthAnchor.constraint(equalToConstant: 48),
+            radarIconView.heightAnchor.constraint(equalToConstant: 48),
 
             titleLabel.topAnchor.constraint(equalTo: radarContainer.bottomAnchor, constant: 12),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),

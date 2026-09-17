@@ -58,3 +58,30 @@ public struct ToriumTheme {
         return button
     }
 }
+
+// MARK: - Official Brand Assets
+
+extension UIImage {
+    /// The official golden Torium cybernetic logo (P-symbol)
+    public static var toriumLogo: UIImage? {
+        if let img = UIImage(named: "app_logo") { return img }
+        if let img = UIImage(named: "AppIcon60x60@2x") { return img }
+        if let path = Bundle.main.path(forResource: "app_logo", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            return img
+        }
+        if let path = Bundle.main.path(forResource: "app_logo_small", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            return img
+        }
+        if let path = Bundle.main.path(forResource: "AppIcon60x60@2x", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            return img
+        }
+        if let path = Bundle.main.path(forResource: "icon", ofType: "png"),
+           let img = UIImage(contentsOfFile: path) {
+            return img
+        }
+        return UIImage(systemName: "bolt.shield.fill")
+    }
+}

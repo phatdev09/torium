@@ -8,6 +8,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
     // 1. Top HUD / Command Bar
     private let hudContainer = UIView()
+    private let brandLogoImageView = UIImageView()
     private let brandTitleLabel = UILabel()
     private let engineStatusBadge = UILabel()
     private let batteryBadge = UILabel()
@@ -124,8 +125,18 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         hudContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
         contentView.addSubview(hudContainer)
 
-        brandTitleLabel.text = "⚡ TORIUM SYSTEM"
-        brandTitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .black)
+        brandLogoImageView.image = UIImage.toriumLogo
+        brandLogoImageView.contentMode = .scaleAspectFit
+        brandLogoImageView.layer.cornerRadius = 5
+        brandLogoImageView.clipsToBounds = true
+        brandLogoImageView.layer.borderWidth = 0.8
+        brandLogoImageView.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.4).cgColor
+        brandLogoImageView.translatesAutoresizingMaskIntoConstraints = false
+        brandLogoImageView.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        brandLogoImageView.heightAnchor.constraint(equalToConstant: 22).isActive = true
+
+        brandTitleLabel.text = "TORIUM SYSTEM"
+        brandTitleLabel.font = UIFont.systemFont(ofSize: 14, weight: .black)
         brandTitleLabel.textColor = ToriumTheme.accentGold
         brandTitleLabel.adjustsFontSizeToFitWidth = true
         brandTitleLabel.minimumScaleFactor = 0.85
@@ -178,7 +189,13 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         masterToggleButton.addTarget(self, action: #selector(toggleEngine), for: .touchUpInside)
         masterToggleButton.translatesAutoresizingMaskIntoConstraints = false
 
-        let brandRow = UIStackView(arrangedSubviews: [brandTitleLabel, engineStatusBadge])
+        let brandTitleStack = UIStackView(arrangedSubviews: [brandLogoImageView, brandTitleLabel])
+        brandTitleStack.axis = .horizontal
+        brandTitleStack.spacing = 6
+        brandTitleStack.alignment = .center
+        brandTitleStack.translatesAutoresizingMaskIntoConstraints = false
+
+        let brandRow = UIStackView(arrangedSubviews: [brandTitleStack, engineStatusBadge])
         brandRow.axis = .horizontal
         brandRow.distribution = .equalSpacing
         brandRow.alignment = .center
