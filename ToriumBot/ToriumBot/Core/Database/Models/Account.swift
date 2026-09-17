@@ -68,6 +68,12 @@ public struct Account: Codable, Identifiable, Equatable {
         return "\(proto)://\(host):\(port)"
     }
 
+    /// Alias for containerId matching Crane naming convention
+    public var craneContainerId: String? {
+        get { return containerId }
+        set { containerId = newValue }
+    }
+
     /// Generates standard backup string:
     /// email|password|bearer_token|clerk_id|device_id|proxy_protocol|proxy_host|proxy_port|proxy_username|proxy_password|referral_code
     public var backupLine: String {

@@ -163,7 +163,7 @@ public final class AccountRegistrar {
         let newAccount = Account(
             email: email,
             password: password,
-            craneContainerId: containerId,
+            containerId: containerId,
             isActive: true
         )
         let insertedId = DatabaseManager.shared.insertAccount(newAccount)

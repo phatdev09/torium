@@ -175,11 +175,13 @@ public final class AddAccountViewController: UIViewController, UIPickerViewDataS
 
     private func updateStepUI(step: AccountRegistrar.RegistrationStep) {
         switch step {
-        case .openingContainer:
+        case .idle:
+            statusLabel.text = "Sẵn sàng"
+        case .openingContainer, .switchingContainer:
             statusLabel.text = "Đang mở Crane container..."
-        case .fillingCredentials:
+        case .fillingCredentials, .fillingForm:
             statusLabel.text = "Đang điền thông tin đăng ký..."
-        case .waitingForUserCaptcha:
+        case .waitingForUserCaptcha, .waitingForCaptcha:
             statusLabel.text = "Đang chờ giải captcha Cloudflare..."
         case .fetchingOTP:
             statusLabel.text = "Đang kiểm tra OTP qua dongvanfb..."
@@ -190,6 +192,8 @@ public final class AddAccountViewController: UIViewController, UIPickerViewDataS
         case .completed:
             statusLabel.text = "Đã hoàn thành!"
             statusLabel.textColor = ToriumTheme.statusGreen
+        case .paused:
+            statusLabel.text = "Đã tạm dừng"
         case .failed(let msg):
             statusLabel.text = "Lỗi: \(msg)"
             statusLabel.textColor = ToriumTheme.statusRed
