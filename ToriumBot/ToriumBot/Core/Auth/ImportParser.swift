@@ -180,7 +180,7 @@ public final class ImportParser {
         )
     }
 
-    private func parseProxyString(_ str: String) -> (host: String?, port: Int?, user: String?, pass: String?, proto: String?) {
+    public func parseProxyString(_ str: String) -> (host: String?, port: Int?, user: String?, pass: String?, proto: String?) {
         let trimmed = str.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return (nil, nil, nil, nil, nil) }
 
