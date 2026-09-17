@@ -298,5 +298,14 @@ static void onInjectTurnstileNotification(CFNotificationCenterRef center, void *
             NULL,
             CFNotificationSuspensionBehaviorDeliverImmediately
         );
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            NULL,
+            onRegStartNotification,
+            CFSTR("com.toriumbot.relogin_start"),
+            NULL,
+            CFNotificationSuspensionBehaviorDeliverImmediately
+        );
     }
 }

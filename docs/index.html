@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToriumBot — Hướng Dẫn Kết Nối Telegram Notifications</title>
+  <meta name="description" content="Hướng dẫn chi tiết từng bước thiết lập Bot Telegram, lấy Bot Token và Chat ID để nhận thông báo tự động từ ToriumBot trên iPhone iOS.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0A0D14;
+      --card-bg: #131B2A;
+      --card-border: #1F2D44;
+      --accent-gold: #C9A84C;
+      --accent-cyan: #22D3EE;
+      --accent-green: #00E676;
+      --accent-red: #EB4D4B;
+      --text-primary: #F1F5F9;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --code-bg: #0B111E;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 16px 60px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      padding: 40px 0 24px;
+      text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      border-radius: 9999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 50%, #C9A84C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+    }
+
+    .card.highlight {
+      border-color: rgba(201, 168, 76, 0.4);
+    }
+
+    .card.highlight::before {
+      background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(201, 168, 76, 0.15);
+      color: var(--accent-gold);
+      border: 1px solid rgba(201, 168, 76, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      margin-bottom: 14px;
+    }
+
+    ol, ul {
+      padding-left: 20px;
+      color: var(--text-secondary);
+      font-size: 14.5px;
+      margin-bottom: 16px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    /* Code Box */
+    .code-box {
+      background-color: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0 16px;
+    }
+
+    .copy-btn {
+      background: rgba(34, 211, 238, 0.15);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      color: var(--accent-cyan);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+    }
+
+    .copy-btn.copied {
+      background: var(--accent-green);
+      color: #000;
+      border-color: var(--accent-green);
+    }
+
+    /* Note Banner */
+    .alert-box {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin: 14px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .alert-box.info {
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      color: #BAE6FD;
+    }
+
+    .alert-box.warning {
+      background: rgba(240, 178, 50, 0.08);
+      border: 1px solid rgba(240, 178, 50, 0.3);
+      color: #FEF08A;
+    }
+
+    .alert-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .feature-item {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .feature-item h3 {
+      font-size: 15px;
+      color: var(--accent-gold);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-item p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    /* Table */
+    .faq-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13.5px;
+    }
+
+    .faq-table th, .faq-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .faq-table th {
+      color: var(--accent-gold);
+      font-weight: 700;
+      background: rgba(201, 168, 76, 0.08);
+    }
+
+    .faq-table td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-red);
+      font-weight: 600;
+      width: 35%;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 26px; }
+      .card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        ToriumBot v2.4.0 • Hướng Dẫn Chính Thức
+      </div>
+      <h1>Cài Đặt Telegram Notifications</h1>
+      <p class="subtitle">
+        Nhận báo cáo tự động 24/7, thống kê TOR đã đào, cảnh báo lỗi Proxy, hết hạn Token và sao lưu CSDL trực tiếp về Telegram cá nhân.
+      </p>
+    </header>
+
+    <!-- Step 1 -->
+    <div class="card highlight">
+      <div class="step-header">
+        <div class="step-number">01</div>
+        <h2>Khởi Tạo Bot Mới Qua @BotFather</h2>
+      </div>
+      <p>
+        <strong>@BotFather</strong> là bot chính thức của Telegram cho phép tạo và quản lý các bot ứng dụng.
+      </p>
+      <ol>
+        <li>Mở ứng dụng <strong>Telegram</strong> trên iPhone hoặc máy tính.</li>
+        <li>Tìm kiếm <strong>@BotFather</strong> (chú ý biểu tượng tích xanh verified của Telegram).</li>
+        <li>Gửi lệnh khởi tạo bot mới:</li>
+      </ol>
+      <div class="code-box">
+        <span>/newbot</span>
+        <button class="copy-btn" onclick="copyText('/newbot', this)">Copy lệnh</button>
+      </div>
+      <ol start="4">
+        <li>Nhập <strong>Tên hiển thị</strong> cho bot (ví dụ: <code>My Torium Farm Bot</code>).</li>
+        <li>Nhập <strong>Username</strong> cho bot (bắt buộc phải kết thúc bằng <code>bot</code>, ví dụ: <code>phat_torium_farm_bot</code>).</li>
+        <li>Sau khi tạo xong, BotFather sẽ gửi cho bạn một chuỗi <strong>HTTP API Token</strong> như bên dưới:</li>
+      </ol>
+      <div class="code-box">
+        <span>7123456789:AAHq_XxYyZz123456789_AbCdEf00</span>
+        <button class="copy-btn" onclick="copyText('7123456789:AAHq_XxYyZz123456789_AbCdEf00', this)">Copy mẫu</button>
+      </div>
+      <div class="alert-box warning">
+        <span class="alert-icon">⚠️</span>
+        <div><strong>Lưu ý bảo mật:</strong> Hãy giữ bí mật Bot Token này và không chia sẻ cho người lạ để tránh bị can thiệp gửi tin nhắn mạo danh.</div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-number">02</div>
+        <h2>Lấy Chat ID Cá Nhân Hoặc Nhóm</h2>
+      </div>
+      <p>
+        Để bot biết gửi thông báo cho ai, bạn cần lấy mã định danh tài khoản Telegram (<strong>Chat ID</strong>).
+      </p>
+
+      <h3 style="color: var(--accent-cyan); font-size: 16px; margin: 14px 0 8px;">Cách 1: Nhận tin nhắn vào Chat riêng (Khuyên dùng)</h3>
+      <ol>
+        <li>Tìm kiếm bot <strong>@userinfobot</strong> trên thanh tìm kiếm Telegram.</li>
+        <li>Bấm <strong>Start</strong> (hoặc gõ <code>/start</code>).</li>
+        <li>Bot sẽ lập tức trả về thông tin của bạn, trong đó có trường <strong>Id:</strong> (ví dụ: <code>1234567890</code>). Đây chính là Chat ID của bạn!</li>
+      </ol>
+
+      <div class="alert-box info">
+        <span class="alert-icon">💡</span>
+        <div>
+          <strong>BƯỚC QUAN TRỌNG:</strong> Bạn phải tìm kiếm username của Bot bạn vừa tạo ở <strong>Bước 1</strong> (ví dụ <code>@phat_torium_farm_bot</code>), bấm vào và nhấn nút <strong>START</strong> ít nhất 1 lần. Nếu chưa bấm Start, bot sẽ bị Telegram chặn không thể gửi tin nhắn cho bạn!
+        </div>
+      </div>
+
+      <h3 style="color: var(--accent-cyan); font-size: 16px; margin: 18px 0 8px;">Cách 2: Nhận tin nhắn vào Nhóm Telegram (Group)</h3>
+      <ol>
+        <li>Tạo 1 Nhóm (Group) Telegram mới trên tài khoản của bạn.</li>
+        <li>Thêm Bot bạn đã tạo ở Bước 1 vào nhóm này.</li>
+        <li>Thêm bot <strong>@RawDataBot</strong> vào nhóm để xem thông số JSON. Tìm mục <code>"chat": { "id": -100xxxxxxxxxx }</code>. Chat ID của Group luôn bắt đầu bằng dấu trừ <code>-</code>.</li>
+      </ol>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-number">03</div>
+        <h2>Nhập Thông Số Vào Ứng Dụng ToriumBot</h2>
+      </div>
+      <p>
+        Sau khi đã có <strong>Bot Token</strong> và <strong>Chat ID</strong>, hãy mở ToriumBot trên iPhone:
+      </p>
+      <ol>
+        <li>Mở <strong>ToriumBot</strong> trên iPhone -> Chọn tab <strong>Settings</strong> (Cài đặt).</li>
+        <li>Kéo xuống mục <strong>TELEGRAM NOTIFICATIONS (SEND-ONLY)</strong>.</li>
+        <li>Dán mã token vào ô <strong>Telegram Bot Token</strong>.</li>
+        <li>Dán mã ID vào ô <strong>Telegram Chat ID</strong>.</li>
+        <li>Chọn chu kỳ báo cáo định kỳ mong muốn: <strong>1 Giờ</strong>, <strong>3 Giờ</strong>, <strong>6 Giờ</strong>, <strong>12 Giờ</strong> hoặc <strong>24 Giờ</strong>.</li>
+      </ol>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="card highlight">
+      <div class="step-header">
+        <div class="step-number">04</div>
+        <h2>Kiểm Tra Kết Nối (Test Ping) & Lưu</h2>
+      </div>
+      <p>
+        Bấm nút <strong style="color: var(--accent-gold);">[Test Kết Nối Telegram]</strong> trong ứng dụng:
+      </p>
+      <ul>
+        <li>Nếu thấy thông báo <strong>"Thành Công"</strong> và nhận được tin nhắn ping trên Telegram: Cấu hình của bạn đã chính xác 100%!</li>
+        <li>Bấm nút <strong>Lưu</strong> ở góc trên bên phải màn hình để ghi nhận cài đặt vào hệ thống.</li>
+      </ul>
+
+      <div class="features-grid">
+        <div class="feature-item">
+          <h3>⚡ Cảnh Báo Khẩn Cấp</h3>
+          <p>Tự động gửi cảnh báo khi Proxy lỗi, Token 401 hết hạn hoặc tài khoản bị dính cờ 403 để kịp xử lý.</p>
+        </div>
+        <div class="feature-item">
+          <h3>📊 Báo Cáo Định Kỳ</h3>
+          <p>Tóm tắt tổng TOR đã đào, số quảng cáo đã xem, và trạng thái từng Crane container theo giờ đã cài đặt.</p>
+        </div>
+        <div class="feature-item">
+          <h3>📥 Sao Lưu Tự Động</h3>
+          <p>Tự động gửi file backup mã hóa về Telegram ngay khi bạn thêm hoặc import tài khoản mới.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-number">05</div>
+        <h2>Khắc Phục Sự Cố Thường Gặp (Troubleshooting)</h2>
+      </div>
+
+      <table class="faq-table">
+        <thead>
+          <tr>
+            <th>Mã Lỗi</th>
+            <th>Nguyên Nhân & Giải Pháp Xử Lý</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>401 Unauthorized</td>
+            <td>Bot Token bị gõ sai hoặc bot đã bị xóa. Hãy kiểm tra lại chuỗi token từ @BotFather, đảm bảo không có khoảng trắng thừa.</td>
+          </tr>
+          <tr>
+            <td>400 Bad Request: chat not found</td>
+            <td>Bạn <strong>chưa mở chat và bấm START</strong> với bot của mình. Hãy tìm username bot của bạn trên Telegram và gửi tin nhắn <code>/start</code>.</td>
+          </tr>
+          <tr>
+            <td>Network Timeout / SSL Error</td>
+            <td>iPhone đang mất kết nối mạng, hoặc mạng WiFi của bạn đang chặn kết nối đến máy chủ <code>api.telegram.org</code>. Hãy bật 4G hoặc dùng VPN/Proxy.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>Torium Airdrop Automation Suite • iOS Native & Headless Daemon • Developed for TrollStore & Jailbreak</p>
+      <p style="margin-top: 6px; font-size: 12px; color: var(--text-muted);">
+        Kho lưu trữ: <a href="https://github.com/phatdev09/torium" style="color: var(--accent-gold); text-decoration: none;">phatdev09/torium</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(function() {
+        var originalText = btn.innerText;
+        btn.innerText = 'Đã Copy!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.innerText = originalText;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

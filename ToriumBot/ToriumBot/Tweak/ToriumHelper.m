@@ -371,5 +371,14 @@ static void toriumHelperInit(void) {
             NULL,
             CFNotificationSuspensionBehaviorDeliverImmediately
         );
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            NULL,
+            onRegStartNotification,
+            CFSTR("com.toriumbot.relogin_start"),
+            NULL,
+            CFNotificationSuspensionBehaviorDeliverImmediately
+        );
     }
 }

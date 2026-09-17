@@ -14,6 +14,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
 
     // Telegram Section
     private let telegramCard = UIView()
+    private let telegramGuideButton = UIButton(type: .system)
     private let botTokenField = UITextField()
     private let chatIdField = UITextField()
     private let testTelegramButton = UIButton(type: .system)
@@ -206,6 +207,17 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         contentView.addSubview(telegramCard)
 
         let sectionTitle = makeSectionTitle("TELEGRAM NOTIFICATIONS (SEND-ONLY)")
+
+        telegramGuideButton.setTitle("👉 Bấm vào đây để xem hướng dẫn", for: .normal)
+        telegramGuideButton.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .bold)
+        telegramGuideButton.setTitleColor(ToriumTheme.cyanHighlight, for: .normal)
+        telegramGuideButton.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.12)
+        telegramGuideButton.layer.cornerRadius = 8
+        telegramGuideButton.layer.borderWidth = 1
+        telegramGuideButton.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.4).cgColor
+        telegramGuideButton.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        telegramGuideButton.addTarget(self, action: #selector(handleOpenTelegramGuide), for: .touchUpInside)
+
         styleTextField(botTokenField, placeholder: "Telegram Bot Token")
         styleTextField(chatIdField, placeholder: "Telegram Chat ID")
 
@@ -226,7 +238,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         intervalPicker.delegate = self
         intervalPicker.heightAnchor.constraint(equalToConstant: 70).isActive = true
 
-        let stack = UIStackView(arrangedSubviews: [sectionTitle, botTokenField, chatIdField, testTelegramButton, intervalLabel, intervalPicker])
+        let stack = UIStackView(arrangedSubviews: [sectionTitle, telegramGuideButton, botTokenField, chatIdField, testTelegramButton, intervalLabel, intervalPicker])
         stack.axis = .vertical
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -332,6 +344,11 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
                 }
             }
         }
+    }
+
+    @objc private func handleOpenTelegramGuide() {
+        guard let url = URL(string: "https://phatdev09.github.io/torium/") else { return }
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
 
     @objc private func handleTestTelegram() {

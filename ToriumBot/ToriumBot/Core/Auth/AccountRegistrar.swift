@@ -425,6 +425,66 @@ public final class AccountRegistrar {
         } catch {
             return nil
         }
-        return nil
+    // MARK: - Direct Sign In (No OTP Required)
+
+    /// Signs in existing account without requesting OTP, auto-authenticates into Crane container, and extracts token
+    public func performDirectLoginWithoutOTP(
+        account: Account,
+        onStepUpdate: @escaping (String) -> Void
+    ) async throws -> Account {
+        guard let accountId = account.id else {
+            throw ToriumAPIError.serverError(statusCode: 400, message: "Thiếu ID tài khoản")
+        }
+
+        onStepUpdate("Đang xác thực thông tin tài khoản...")
+
+        // Check if token already exists & active
+        if let token = account.bearerToken, !token.isEmpty {
+            onStepUpdate("Tài khoản đã có token. Kiểm tra trạng thái...")
+            if (try? await ToriumAPIClient.shared.checkMiningStatus(account: account)) != nil {
+                onStepUpdate("Token đang hoạt động tốt! Sẵn sàng đào.")
+                return account
+            }
+        }
+
+        // Perform 2-stage re-login (Headless Clerk refresh -> Crane In-App login without OTP)
+        onStepUpdate("Đang đăng nhập trực tiếp (Không cần OTP)...")
+        let success = await performAutoRelogin(account: account)
+        if success, let updated = DatabaseManager.shared.getAccount(id: accountId) {
+            onStepUpdate("Đăng nhập thành công! Token đã lưu vào hệ thống.")
+            return updated
+        } else {
+            // Fallback: If performAutoRelogin did not get token, ensure container exists and try launching
+            if let cId = account.containerId, !cId.isEmpty {
+                writeProxyJSON(account: account)
+                let taskData: [String: String] = [
+                    "action": "login",
+                    "email": account.email,
+                    "password": account.password
+                ]
+                if let json = try? JSONSerialization.data(withJSONObject: taskData) {
+                    try? json.write(to: URL(fileURLWithPath: "\(ipcBaseDir)/task.json"))
+                }
+                CraneManager.shared.switchAndLaunch(containerId: cId)
+                postDarwinNotification("com.toriumbot.relogin_start")
+
+                for _ in 0..<30 {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    if let res = readAuthResult() {
+                        DatabaseManager.shared.updateTokens(id: accountId, token: res.token, clerkId: res.clerkId, deviceId: res.deviceId)
+                        cleanResultJSON()
+                        CraneBridge.terminateToriumApp()
+                        if let updated = DatabaseManager.shared.getAccount(id: accountId) {
+                            onStepUpdate("Đăng nhập thành công!")
+                            return updated
+                        }
+                    }
+                }
+                CraneBridge.terminateToriumApp()
+            }
+
+            onStepUpdate("Đăng nhập thất bại. Kiểm tra lại mật khẩu hoặc proxy.")
+            throw ToriumAPIError.serverError(statusCode: 401, message: "Đăng nhập thất bại")
+        }
     }
 }
