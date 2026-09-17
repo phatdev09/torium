@@ -93,10 +93,27 @@ public final class MiningEngine {
 
     // MARK: - Account Evaluation Loop
 
+    private var lastHousekeepingDate: String = ""
+
+    private func checkHousekeeping() {
+        let now = Date()
+        let hour = Calendar.current.component(.hour, from: now)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: now)
+
+        if hour == 3 && lastHousekeepingDate != today {
+            lastHousekeepingDate = today
+            DatabaseManager.shared.performDatabaseHousekeeping()
+        }
+    }
+
     private func evaluateAccounts() {
         guard isRunning, !isProcessing else { return }
         // Do not process accounts if entire device is offline
         guard isNetworkAvailable else { return }
+
+        checkHousekeeping()
 
         isProcessing = true
 
@@ -241,15 +258,7 @@ public final class MiningEngine {
             }
 
         case .forbidden:
-            DatabaseManager.shared.insertLog(Log(
-                accountId: accountId,
-                level: .error,
-                action: .general,
-                message: "Response 403 Forbidden. Account [\(account.email)] có thể bị ban!"
-            ))
-            var updated = account
-            updated.isBanned = true
-            DatabaseManager.shared.updateAccount(updated)
+            DatabaseManager.shared.quarantineAccount(id: accountId, reason: "Response 403 Forbidden")
             TelegramReporter.shared.alertAccountBanned(email: account.email)
 
         default:

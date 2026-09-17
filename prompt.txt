@@ -158,3 +158,57 @@ Tweak hook `[NSURLSessionConfiguration defaultSessionConfiguration]` và `epheme
 - Cảnh báo tức thì khi: Proxy chết, Account 401, Account 403.
 - Báo cáo định kỳ mỗi X giờ.
 - **Smart Auto-Backup:** Tự động gửi file backup mã hoá về Telegram ngay khi thêm acc mới hoặc refresh token.
+
+---
+
+## HỆ THỐNG MỞ RỘNG ĐỘT PHÁ (10 CORE EXTENSIONS - EXHAUSTIVE SPEC)
+
+### 1. Hybrid Captcha Engine (1-Tap Assisted ⇄ Auto Solver API)
+- **Tầng 1 (Free / Default):** 1-Tap Assisted — Tweak điền form và OTP, người dùng chạm 1 lần vào ô Cloudflare Turnstile.
+- **Tầng 2 (Batch Automation):** Tích hợp API giải Captcha từ xa (CapSolver / 2Captcha / Anti-Captcha qua API Key trong Settings).
+- **Tự động hóa 100%:** Khi import hàng loạt 50–500 tài khoản, hệ thống tự gọi API giải Captcha qua Proxy của container mà không cần chạm tay.
+
+### 2. Dynamic Turnstile Sitekey Sniffer & WKWebView DOM Injector
+- `ToriumHelper` hook `WKWebView` để bắt dynamic Sitekey từ URL request `challenges.cloudflare.com/.../api.js`.
+- Gửi payload tới Captcha Solver API qua IPC.
+- Khi nhận được response token, sử dụng `evaluateJavaScript:` bơm chuỗi `cf-turnstile-response` trực tiếp vào DOM ngầm để kích hoạt submit.
+
+### 3. Preemptive SSL Pinning Armor
+- Tích hợp lớp phòng vệ chủ động trong `ToriumHelper`:
+  - Hook `SecTrustEvaluateWithError` và `SecTrustEvaluate` từ `Security.framework`.
+  - Hook `URLSession:didReceiveChallenge:completionHandler:` trên `CFNetwork`.
+  - Luôn trả về `kSecTrustResultProceed` cho domain `torium.network` và `clerk.torium.network`.
+  - Miễn nhiễm 100% với các bản cập nhật app Torium tương lai có nhúng SSL Certificate Pinning.
+
+### 4. Lightweight Hardware & Battery Monitor (Skill Ponytail)
+- Kích hoạt `UIDevice.current.isBatteryMonitoringEnabled = true`.
+- Theo dõi `batteryLevel` và `batteryState` (charging/unplugged).
+- Hiển thị widget biểu tượng cảnh báo pin trực quan trên `DashboardViewController`.
+- Không can thiệp độ sáng hay điều phối worker phức tạp, tuân thủ nguyên tắc tối giản và ổn định.
+
+### 5. Rotating Proxy Sticky Session & Preflight Gatekeeper
+- Tự động sinh `Session ID` độc lập cho từng tài khoản (ví dụ: `_session-acc01_lifetime-30m`) với các nhà cung cấp Proxy xoay dân cư (Smartproxy, Webshare, BrightData) để giữ nguyên Exit IP trong suốt chu kỳ đào.
+- **Preflight Check:** Gửi request nhẹ tới `/cdn-cgi/trace` hoặc `api.ipify.org` qua Proxy trước khi tương tác với Torium API để đảm bảo proxy sống và ghi nhận Real Exit IP vào SQLite.
+
+### 6. 2-Stage 401 Token Expiry Self-Healing Pipeline
+- **Giai đoạn 1 (Headless Refresh):** Gửi request trực tiếp tới Clerk Session Refresh API bằng refresh token/session cookie.
+- **Giai đoạn 2 (Crane In-App Capture Fallback):** Nếu headless refresh thất bại, tự động chuyển container Crane, mở app Torium để `ToriumHelper` bắt Bearer token mới từ traffic thật, sau đó lập tức tắt app về nền.
+
+### 7. Dynamic API Route Overrides (Anti-Breakage)
+- Bảng `settings` trong SQLite lưu trữ danh mục API routes (Base URL, status, rewarded-intents, boost).
+- Màn hình Settings cho phép người dùng xem và sửa đổi trực tiếp các route nếu Torium nâng cấp phiên bản API (từ `v1` lên `v2`) mà không cần biên dịch lại file IPA.
+
+### 8. 24-Hour Database Housekeeping & Disk Protection
+- Chạy tác vụ bảo trì tự động lúc 03:00 sáng mỗi ngày:
+  - Tự động thanh lọc các dòng log cũ hơn 7 ngày trong bảng `logs`.
+  - Thực thi `PRAGMA wal_checkpoint(TRUNCATE)` để thu nhỏ file WAL.
+  - Chạy `VACUUM` giải phóng phân mảnh, đảm bảo dung lượng file CSDL SQLite luôn `<15MB`, bảo vệ bộ nhớ trong của iPhone 6s 16GB/32GB.
+
+### 9. Account Death & Quarantine Protocol (403 Defense)
+- Khi nhận response HTTP 403 Forbidden hoặc thông báo lỗi chứa `banned`, `suspended`, `sybil_detected`:
+  - Lập tức gắn cờ tài khoản là `BANNED` trong CSDL SQLite.
+  - Cách ly hoàn toàn, loại bỏ vĩnh viễn khỏi hàng đợi đào ngầm và xem quảng cáo để không lãng phí tài nguyên CPU/Proxy.
+  - Bắn cảnh báo Telegram khẩn cấp với chi tiết email, proxy và thông điệp lỗi từ server.
+
+### 10. TGE Wallet Binding Policy (YAGNI Compliant)
+- Tuân thủ triệt để nguyên tắc YAGNI: Không xây dựng bộ sinh ví on-chain phỏng đoán trước khi Torium công bố mạng blockchain và hợp đồng chính thức. Người dùng liên kết ví thủ công khi có thông báo TGE.

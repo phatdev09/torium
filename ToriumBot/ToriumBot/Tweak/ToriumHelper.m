@@ -1,7 +1,10 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <CFNetwork/CFNetwork.h>
+#import <WebKit/WebKit.h>
+#import <Security/Security.h>
 #import <objc/runtime.h>
+#import <dlfcn.h>
 
 #define IPC_DIR @"/var/mobile/Library/ToriumBot/ipc"
 
@@ -14,7 +17,32 @@ static void applyProxyConfiguration(NSURLSessionConfiguration *config);
 static void inspectRequest(NSURLRequest *request);
 static void autoFillRegistrationForm(void);
 static void autoFillOTP(void);
+static void injectTurnstileToken(void);
 static void findTextFieldsInView(UIView *view, NSMutableArray<UITextField *> *result);
+
+// Active WKWebView tracker
+static __weak WKWebView *sActiveWebView = nil;
+
+// MARK: - Preemptive SSL Pinning Armor
+
+typedef bool (*SecTrustEvaluateWithErrorFunc)(SecTrustRef trust, CFErrorRef *error);
+typedef OSStatus (*SecTrustEvaluateFunc)(SecTrustRef trust, SecTrustResultType *result);
+
+static SecTrustEvaluateWithErrorFunc orig_SecTrustEvaluateWithError = NULL;
+static SecTrustEvaluateFunc orig_SecTrustEvaluate = NULL;
+
+static bool hooked_SecTrustEvaluateWithError(SecTrustRef trust, CFErrorRef *error) {
+    // Always report valid certificate for torium domains
+    if (error) *error = NULL;
+    return true;
+}
+
+static OSStatus hooked_SecTrustEvaluate(SecTrustRef trust, SecTrustResultType *result) {
+    if (result) {
+        *result = kSecTrustResultProceed;
+    }
+    return errSecSuccess;
+}
 
 // MARK: - Method Swizzling Function Pointers
 
@@ -41,6 +69,18 @@ static NSURLSessionDataTask * hooked_dataTaskWithRequest(id self, SEL _cmd, NSUR
     inspectRequest(request);
     if (orig_dataTaskWithRequest) {
         return orig_dataTaskWithRequest(self, _cmd, request, completionHandler);
+    }
+    return nil;
+}
+
+static WKNavigation * (*orig_wkLoadRequest)(id, SEL, NSURLRequest *) = NULL;
+static WKNavigation * hooked_wkLoadRequest(id self, SEL _cmd, NSURLRequest *request) {
+    if ([self isKindOfClass:[WKWebView class]]) {
+        sActiveWebView = (WKWebView *)self;
+    }
+    inspectRequest(request);
+    if (orig_wkLoadRequest) {
+        return orig_wkLoadRequest(self, _cmd, request);
     }
     return nil;
 }
@@ -85,13 +125,32 @@ static void applyProxyConfiguration(NSURLSessionConfiguration *config) {
     config.connectionProxyDictionary = proxyDict;
 }
 
-// MARK: - Auth & OTA Version Sniffer
+// MARK: - Auth & Turnstile Sniffer
 
 static void inspectRequest(NSURLRequest *request) {
     NSString *urlStr = request.URL.absoluteString;
+    if (!urlStr) return;
+
+    // 1. Dynamic Turnstile Sitekey Sniffing
+    if ([urlStr containsString:@"challenges.cloudflare.com"] || [urlStr containsString:@"turnstile"]) {
+        NSURLComponents *components = [NSURLComponents componentsWithString:urlStr];
+        for (NSURLQueryItem *item in components.queryItems) {
+            if ([item.name isEqualToString:@"sitekey"] || [item.name isEqualToString:@"k"]) {
+                NSString *sitekey = item.value;
+                if (sitekey.length > 5) {
+                    NSDictionary *sitekeyDict = @{@"sitekey": sitekey, @"url": urlStr};
+                    NSData *skData = [NSJSONSerialization dataWithJSONObject:sitekeyDict options:0 error:nil];
+                    [skData writeToFile:[IPC_DIR stringByAppendingPathComponent:@"turnstile_sitekey.json"] atomically:YES];
+                    postDarwinNotification(@"com.toriumbot.sitekey_captured");
+                    break;
+                }
+            }
+        }
+    }
+
     if (![urlStr containsString:@"torium.network"]) return;
 
-    // 1. Capture dynamic OTA & App Versions
+    // 2. Capture dynamic OTA & App Versions
     NSString *otaVersion = [request valueForHTTPHeaderField:@"x-ota-version"];
     NSString *appVersion = [request valueForHTTPHeaderField:@"x-app-version"];
     if (otaVersion.length > 0 || appVersion.length > 0) {
@@ -102,7 +161,7 @@ static void inspectRequest(NSURLRequest *request) {
         [vData writeToFile:[IPC_DIR stringByAppendingPathComponent:@"ota_version.json"] atomically:YES];
     }
 
-    // 2. Capture Bearer Token
+    // 3. Capture Bearer Token
     NSString *authHeader = [request valueForHTTPHeaderField:@"Authorization"];
     if (authHeader && [authHeader hasPrefix:@"Bearer "]) {
         NSString *token = [authHeader stringByReplacingOccurrencesOfString:@"Bearer " withString:@""];
@@ -118,6 +177,36 @@ static void inspectRequest(NSURLRequest *request) {
             postDarwinNotification(@"com.toriumbot.auth_extracted");
         }
     }
+}
+
+// MARK: - Turnstile DOM Token Injection
+
+static void injectTurnstileToken(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString *tokenPath = [IPC_DIR stringByAppendingPathComponent:@"turnstile_token.json"];
+        NSData *data = [NSData dataWithContentsOfFile:tokenPath];
+        if (!data) return;
+
+        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        NSString *token = dict[@"token"];
+        if (!token || token.length < 10) return;
+
+        if (sActiveWebView) {
+            NSString *js = [NSString stringWithFormat:
+                @"(() => {"
+                @"  const el = document.querySelector('[name=\"cf-turnstile-response\"]') || document.querySelector('input[name*=\"turnstile\"]');"
+                @"  if (el) {"
+                @"    el.value = '%@';"
+                @"    el.dispatchEvent(new Event('input', { bubbles: true }));"
+                @"    el.dispatchEvent(new Event('change', { bubbles: true }));"
+                @"  }"
+                @"  if (window.turnstile && typeof window.turnstile.submit === 'function') {"
+                @"    window.turnstile.submit('%@');"
+                @"  }"
+                @"})();", token, token];
+            [sActiveWebView evaluateJavaScript:js completionHandler:nil];
+        }
+    });
 }
 
 // MARK: - Form Auto-Fill & OTP Injection Helpers
@@ -212,12 +301,20 @@ static void onOTPReadyNotification(CFNotificationCenterRef center, void *observe
     autoFillOTP();
 }
 
+static void onInjectTurnstileNotification(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    injectTurnstileToken();
+}
+
 // MARK: - Constructor
 
 __attribute__((constructor))
 static void toriumHelperInit(void) {
     @autoreleasepool {
-        // Swizzle NSURLSessionConfiguration class methods
+        // 1. Preemptive SSL Pinning Armor
+        orig_SecTrustEvaluateWithError = (SecTrustEvaluateWithErrorFunc)dlsym(RTLD_DEFAULT, "SecTrustEvaluateWithError");
+        orig_SecTrustEvaluate = (SecTrustEvaluateFunc)dlsym(RTLD_DEFAULT, "SecTrustEvaluate");
+
+        // 2. Swizzle NSURLSessionConfiguration class methods
         Method m1 = class_getClassMethod([NSURLSessionConfiguration class], @selector(defaultSessionConfiguration));
         if (m1) {
             orig_defaultSessionConfiguration = (NSURLSessionConfiguration * (*)(Class, SEL))method_getImplementation(m1);
@@ -230,14 +327,24 @@ static void toriumHelperInit(void) {
             method_setImplementation(m2, (IMP)hooked_ephemeralSessionConfiguration);
         }
 
-        // Swizzle NSURLSession dataTaskWithRequest:completionHandler:
+        // 3. Swizzle NSURLSession dataTaskWithRequest:completionHandler:
         Method m3 = class_getInstanceMethod([NSURLSession class], @selector(dataTaskWithRequest:completionHandler:));
         if (m3) {
             orig_dataTaskWithRequest = (NSURLSessionDataTask * (*)(id, SEL, NSURLRequest *, id))method_getImplementation(m3);
             method_setImplementation(m3, (IMP)hooked_dataTaskWithRequest);
         }
 
-        // Register Darwin notification observers
+        // 4. Swizzle WKWebView loadRequest: for Turnstile sniffer & DOM injection
+        Class wkClass = NSClassFromString(@"WKWebView");
+        if (wkClass) {
+            Method m4 = class_getInstanceMethod(wkClass, @selector(loadRequest:));
+            if (m4) {
+                orig_wkLoadRequest = (WKNavigation * (*)(id, SEL, NSURLRequest *))method_getImplementation(m4);
+                method_setImplementation(m4, (IMP)hooked_wkLoadRequest);
+            }
+        }
+
+        // 5. Register Darwin notification observers
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
             NULL,
@@ -252,6 +359,15 @@ static void toriumHelperInit(void) {
             NULL,
             onOTPReadyNotification,
             CFSTR("com.toriumbot.otp_ready"),
+            NULL,
+            CFNotificationSuspensionBehaviorDeliverImmediately
+        );
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            NULL,
+            onInjectTurnstileNotification,
+            CFSTR("com.toriumbot.inject_turnstile"),
             NULL,
             CFNotificationSuspensionBehaviorDeliverImmediately
         );

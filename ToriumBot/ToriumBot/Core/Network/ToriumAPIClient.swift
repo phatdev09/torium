@@ -132,6 +132,10 @@ public final class ToriumAPIClient {
         self.session = ProxyURLSession.createSession(account: account, timeoutInterval: 30.0)
     }
 
+    private var activeBaseURL: String {
+        return DatabaseManager.shared.getAPIBaseURL()
+    }
+
     private var activeOtaVersion: String {
         return DatabaseManager.shared.getSetting(key: "x_ota_version") ?? ToriumAPIClient.defaultOtaVersion
     }
@@ -148,8 +152,8 @@ public final class ToriumAPIClient {
         body: Data? = nil,
         requiresAuth: Bool = true
     ) throws -> URLRequest {
-        guard let url = URL(string: "\(ToriumAPIClient.baseURL)\(path)") else {
-            throw ToriumAPIError.networkError("Invalid URL")
+        guard let url = URL(string: "\(activeBaseURL)\(path)") else {
+            throw ToriumAPIError.networkError("Invalid URL: \(activeBaseURL)\(path)")
         }
 
         var request = URLRequest(url: url)
@@ -197,14 +201,26 @@ public final class ToriumAPIClient {
                     throw ToriumAPIError.unauthorized
                 }
                 if httpResponse.statusCode == 403 {
+                    let errStr = String(data: data, encoding: .utf8) ?? "403 Forbidden"
+                    if let aid = account.id {
+                        DatabaseManager.shared.quarantineAccount(id: aid, reason: errStr)
+                    }
                     throw ToriumAPIError.forbidden
                 }
                 if httpResponse.statusCode == 429 {
                     throw ToriumAPIError.rateLimited
                 }
 
+                let bodyStr = String(data: data, encoding: .utf8) ?? ""
+                if bodyStr.contains("banned") || bodyStr.contains("suspended") || bodyStr.contains("sybil_detected") {
+                    if let aid = account.id {
+                        DatabaseManager.shared.quarantineAccount(id: aid, reason: bodyStr)
+                    }
+                    throw ToriumAPIError.forbidden
+                }
+
                 guard (200...299).contains(httpResponse.statusCode) else {
-                    let errStr = String(data: data, encoding: .utf8) ?? "Unknown"
+                    let errStr = bodyStr.isEmpty ? "Status \(httpResponse.statusCode)" : bodyStr
                     throw ToriumAPIError.serverError(statusCode: httpResponse.statusCode, message: errStr)
                 }
 
@@ -246,7 +262,8 @@ public final class ToriumAPIClient {
     // MARK: - Endpoint 2: Check Mining Status
 
     public func getSessionStatus() async throws -> SessionStatusResponse {
-        let req = try makeRequest(path: "/v1/mining/v2/session-status", method: "GET", requiresAuth: true)
+        let path = DatabaseManager.shared.getAPIMiningStatusPath()
+        let req = try makeRequest(path: path, method: "GET", requiresAuth: true)
         return try await executeWithRetry(req, decodeType: SessionStatusResponse.self)
     }
 
@@ -298,7 +315,8 @@ public final class ToriumAPIClient {
         let payload = BoostRequest(verifiedIntentId: verifiedIntentId, adRevenue: revenue)
         let bodyData = try JSONEncoder().encode(payload)
 
-        let req = try makeRequest(path: "/v1/mining/v2/boost", method: "POST", body: bodyData, requiresAuth: true)
+        let path = DatabaseManager.shared.getAPIBoostPath()
+        let req = try makeRequest(path: path, method: "POST", body: bodyData, requiresAuth: true)
         return try await executeWithRetry(req, decodeType: BoostResponse.self)
     }
 

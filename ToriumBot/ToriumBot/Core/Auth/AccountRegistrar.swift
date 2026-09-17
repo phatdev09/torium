@@ -33,12 +33,39 @@ public final class AccountRegistrar {
         }
     }
 
-    // MARK: - Auto Re-Login Flow on 401
+    // MARK: - 2-Stage Auto Re-Login Flow on 401
 
-    /// Automatically logs into Torium in the background when 401 Unauthorized is detected
+    /// Stage 1 (Headless) + Stage 2 (Crane In-App Capture) 401 Recovery Pipeline
     public func performAutoRelogin(account: Account) async -> Bool {
+        guard let accountId = account.id else { return false }
+
+        // Stage 1: Attempt Headless Session Refresh via Clerk API
+        if let newTokens = await attemptHeadlessClerkRefresh(account: account) {
+            DatabaseManager.shared.updateTokens(
+                id: accountId,
+                token: newTokens.token,
+                clerkId: newTokens.clerkId,
+                deviceId: newTokens.deviceId
+            )
+            DatabaseManager.shared.insertLog(Log(
+                accountId: accountId,
+                level: .info,
+                action: .login,
+                message: "Stage 1 (Headless) Re-Login thành công! Không cần mở app [\(account.email)]."
+            ))
+            return true
+        }
+
+        // Stage 2: Crane In-App Capture Fallback
         guard let containerId = account.containerId, !containerId.isEmpty else { return false }
         createIPCDirectoryIfNeeded()
+
+        DatabaseManager.shared.insertLog(Log(
+            accountId: accountId,
+            level: .info,
+            action: .login,
+            message: "Stage 2: Mở container Crane [\(containerId)] để ToriumHelper bắt token..."
+        ))
 
         // 1. Write proxy.json so in-app traffic is protected
         writeProxyJSON(account: account)
@@ -65,23 +92,59 @@ public final class AccountRegistrar {
             if let result = readAuthResult() {
                 // Update SQLite
                 DatabaseManager.shared.updateTokens(
-                    id: account.id!,
+                    id: accountId,
                     token: result.token,
                     clerkId: result.clerkId,
                     deviceId: result.deviceId
                 )
                 DatabaseManager.shared.insertLog(Log(
-                    accountId: account.id,
+                    accountId: accountId,
                     level: .info,
                     action: .login,
-                    message: "Auto Re-Login thành công! Đã cấp token mới cho [\(account.email)]."
+                    message: "Stage 2 Re-Login thành công! Đã cấp token mới cho [\(account.email)]."
                 ))
                 cleanResultJSON()
+                // Terminate app to preserve memory
+                system("killall -9 Torium 2>/dev/null")
                 return true
             }
         }
 
+        // Terminate app if timeout
+        system("killall -9 Torium 2>/dev/null")
         return false
+    }
+
+    /// Headless Clerk token refresh via HTTP request
+    private func attemptHeadlessClerkRefresh(account: Account) async -> (token: String, clerkId: String, deviceId: String)? {
+        guard let clerkId = account.clerkId, !clerkId.isEmpty,
+              let currentToken = account.bearerToken, !currentToken.isEmpty else {
+            return nil
+        }
+
+        let session = ProxyURLSession.createSession(account: account, timeoutInterval: 10.0)
+        guard let url = URL(string: "https://clerk.torium.network/v1/client/sessions/\(clerkId)/tokens") else {
+            return nil
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(currentToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            let (data, response) = try await session.data(for: req)
+            if let httpRes = response as? HTTPURLResponse, (200...299).contains(httpRes.statusCode) {
+                if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let jwt = dict["jwt"] as? String ?? dict["token"] as? String, !jwt.isEmpty {
+                    let devId = account.deviceId ?? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+                    return (jwt, clerkId, devId)
+                }
+            }
+        } catch {
+            return nil
+        }
+        return nil
     }
 
     // MARK: - Single Account Registration
@@ -121,11 +184,22 @@ public final class AccountRegistrar {
         postDarwinNotification("com.toriumbot.reg_start")
         try await Task.sleep(nanoseconds: 1_500_000_000)
 
-        // Step 4: Wait for user to tap Cloudflare Captcha
+        // Step 4: Wait for user or Auto-API to solve Cloudflare Captcha
         onStepUpdate(.waitingForCaptcha)
-        await withCheckedContinuation { continuation in
-            onRequestCaptchaSolve {
-                continuation.resume()
+        let captchaMode = DatabaseManager.shared.getSetting(key: "captcha_mode") ?? "1-tap"
+        let apiKey = DatabaseManager.shared.getSetting(key: "captcha_api_key") ?? ""
+        var autoSolved = false
+
+        if captchaMode == "auto" && !apiKey.isEmpty {
+            autoSolved = await attemptAutoSolveTurnstile(apiKey: apiKey, account: account)
+        }
+
+        if !autoSolved {
+            // Fallback: 1-Tap Assisted manual tap
+            await withCheckedContinuation { continuation in
+                onRequestCaptchaSolve {
+                    continuation.resume()
+                }
             }
         }
 
@@ -249,5 +323,80 @@ public final class AccountRegistrar {
         let center = CFNotificationCenterGetDarwinNotifyCenter()
         let cfName = CFNotificationName(name as CFString)
         CFNotificationCenterPostNotification(center, cfName, nil, nil, true)
+    }
+
+    // MARK: - CapSolver Automated Turnstile Solving
+
+    private func attemptAutoSolveTurnstile(apiKey: String, account: Account) async -> Bool {
+        var sitekey = "0x4AAAAAAAx..."
+        let sitekeyPath = "\(ipcBaseDir)/turnstile_sitekey.json"
+        if FileManager.default.fileExists(atPath: sitekeyPath),
+           let data = try? Data(contentsOf: URL(fileURLWithPath: sitekeyPath)),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+           let sk = dict["sitekey"], !sk.isEmpty {
+            sitekey = sk
+        }
+
+        guard let url = URL(string: "https://api.capsolver.com/createTask") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload: [String: Any] = [
+            "clientKey": apiKey,
+            "task": [
+                "type": "AntiTurnstileTaskProxyLess",
+                "websiteURL": "https://api.torium.network",
+                "websiteKey": sitekey
+            ]
+        ]
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: payload) else { return false }
+        req.httpBody = bodyData
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: req)
+            if let http = response as? HTTPURLResponse, http.statusCode == 200,
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let taskId = dict["taskId"] as? String {
+
+                for _ in 0..<15 {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    if let token = await pollCapSolverResult(apiKey: apiKey, taskId: taskId) {
+                        let tokenData: [String: String] = ["token": token]
+                        if let tJson = try? JSONSerialization.data(withJSONObject: tokenData) {
+                            try? tJson.write(to: URL(fileURLWithPath: "\(ipcBaseDir)/turnstile_token.json"))
+                        }
+                        postDarwinNotification("com.toriumbot.inject_turnstile")
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        return true
+                    }
+                }
+            }
+        } catch {
+            return false
+        }
+        return false
+    }
+
+    private func pollCapSolverResult(apiKey: String, taskId: String) async -> String? {
+        guard let url = URL(string: "https://api.capsolver.com/getTaskResult") else { return nil }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let payload: [String: Any] = ["clientKey": apiKey, "taskId": taskId]
+        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            if let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let status = dict["status"] as? String, status == "ready",
+               let solution = dict["solution"] as? [String: Any],
+               let token = solution["token"] as? String {
+                return token
+            }
+        } catch {
+            return nil
+        }
+        return nil
     }
 }

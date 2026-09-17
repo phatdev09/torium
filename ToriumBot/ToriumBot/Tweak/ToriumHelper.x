@@ -1,12 +1,24 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <CFNetwork/CFNetwork.h>
+#import <WebKit/WebKit.h>
+#import <Security/Security.h>
 
 #define IPC_DIR @"/var/mobile/Library/ToriumBot/ipc"
 
 static void postDarwinNotification(NSString* name) {
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge CFStringRef)name, NULL, NULL, true);
 }
+
+static __weak WKWebView *sActiveWebView = nil;
+
+// Forward declarations
+static void applyProxyConfiguration(NSURLSessionConfiguration *config);
+static void inspectRequest(NSURLRequest *request);
+static void autoFillRegistrationForm(void);
+static void autoFillOTP(void);
+static void injectTurnstileToken(void);
+static void findTextFieldsInView(UIView *view, NSMutableArray<UITextField *> *result);
 
 // MARK: - In-App Proxy Swizzling
 
@@ -64,7 +76,7 @@ static void applyProxyConfiguration(NSURLSessionConfiguration *config) {
     config.connectionProxyDictionary = proxyDict;
 }
 
-// MARK: - Auth & OTA Version Sniffer
+// MARK: - Auth & Turnstile Sniffer
 
 %hook NSURLSession
 
@@ -75,11 +87,40 @@ static void applyProxyConfiguration(NSURLSessionConfiguration *config) {
 
 %end
 
+%hook WKWebView
+
+- (WKNavigation *)loadRequest:(NSURLRequest *)request {
+    sActiveWebView = self;
+    inspectRequest(request);
+    return %orig;
+}
+
+%end
+
 static void inspectRequest(NSURLRequest *request) {
     NSString *urlStr = request.URL.absoluteString;
+    if (!urlStr) return;
+
+    // 1. Capture dynamic Turnstile Sitekey
+    if ([urlStr containsString:@"challenges.cloudflare.com"] || [urlStr containsString:@"turnstile"]) {
+        NSURLComponents *components = [NSURLComponents componentsWithString:urlStr];
+        for (NSURLQueryItem *item in components.queryItems) {
+            if ([item.name isEqualToString:@"sitekey"] || [item.name isEqualToString:@"k"]) {
+                NSString *sitekey = item.value;
+                if (sitekey.length > 5) {
+                    NSDictionary *sitekeyDict = @{@"sitekey": sitekey, @"url": urlStr};
+                    NSData *skData = [NSJSONSerialization dataWithJSONObject:sitekeyDict options:0 error:nil];
+                    [skData writeToFile:[IPC_DIR stringByAppendingPathComponent:@"turnstile_sitekey.json"] atomically:YES];
+                    postDarwinNotification(@"com.toriumbot.sitekey_captured");
+                    break;
+                }
+            }
+        }
+    }
+
     if (![urlStr containsString:@"torium.network"]) return;
 
-    // 1. Capture dynamic OTA & App Versions
+    // 2. Capture dynamic OTA & App Versions
     NSString *otaVersion = [request valueForHTTPHeaderField:@"x-ota-version"];
     NSString *appVersion = [request valueForHTTPHeaderField:@"x-app-version"];
     if (otaVersion.length > 0 || appVersion.length > 0) {
@@ -90,7 +131,7 @@ static void inspectRequest(NSURLRequest *request) {
         [vData writeToFile:[IPC_DIR stringByAppendingPathComponent:@"ota_version.json"] atomically:YES];
     }
 
-    // 2. Capture Bearer Token
+    // 3. Capture Bearer Token
     NSString *authHeader = [request valueForHTTPHeaderField:@"Authorization"];
     if (authHeader && [authHeader hasPrefix:@"Bearer "]) {
         NSString *token = [authHeader stringByReplacingOccurrencesOfString:@"Bearer " withString:@""];
@@ -108,9 +149,39 @@ static void inspectRequest(NSURLRequest *request) {
     }
 }
 
+// MARK: - Turnstile DOM Token Injection
+
+static void injectTurnstileToken(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString *tokenPath = [IPC_DIR stringByAppendingPathComponent:@"turnstile_token.json"];
+        NSData *data = [NSData dataWithContentsOfFile:tokenPath];
+        if (!data) return;
+
+        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        NSString *token = dict[@"token"];
+        if (!token || token.length < 10) return;
+
+        if (sActiveWebView) {
+            NSString *js = [NSString stringWithFormat:
+                @"(() => {"
+                @"  const el = document.querySelector('[name=\"cf-turnstile-response\"]') || document.querySelector('input[name*=\"turnstile\"]');"
+                @"  if (el) {"
+                @"    el.value = '%@';"
+                @"    el.dispatchEvent(new Event('input', { bubbles: true }));"
+                @"    el.dispatchEvent(new Event('change', { bubbles: true }));"
+                @"  }"
+                @"  if (window.turnstile && typeof window.turnstile.submit === 'function') {"
+                @"    window.turnstile.submit('%@');"
+                @"  }"
+                @"})();", token, token];
+            [sActiveWebView evaluateJavaScript:js completionHandler:nil];
+        }
+    });
+}
+
 // MARK: - Form Auto-Fill & OTP Injection Helpers
 
-static void autoFillRegistrationForm() {
+static void autoFillRegistrationForm(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         NSString *taskPath = [IPC_DIR stringByAppendingPathComponent:@"task.json"];
         NSData *data = [NSData dataWithContentsOfFile:taskPath];
@@ -128,17 +199,14 @@ static void autoFillRegistrationForm() {
         findTextFieldsInView(keyWindow, fields);
 
         if (fields.count >= 2) {
-            // Field 0: Email
             [fields[0] becomeFirstResponder];
             fields[0].text = email;
             [[NSNotificationCenter defaultCenter] postNotificationName:UITextFieldTextDidChangeNotification object:fields[0]];
 
-            // Field 1: Password
             [fields[1] becomeFirstResponder];
             fields[1].text = password;
             [[NSNotificationCenter defaultCenter] postNotificationName:UITextFieldTextDidChangeNotification object:fields[1]];
 
-            // Field 2: Referral Code (Optional)
             if (fields.count >= 3 && refCode.length > 0) {
                 [fields[2] becomeFirstResponder];
                 fields[2].text = refCode;
@@ -150,7 +218,7 @@ static void autoFillRegistrationForm() {
     });
 }
 
-static void autoFillOTP() {
+static void autoFillOTP(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         NSString *otpPath = [IPC_DIR stringByAppendingPathComponent:@"otp.json"];
         NSData *data = [NSData dataWithContentsOfFile:otpPath];
@@ -167,11 +235,9 @@ static void autoFillOTP() {
         findTextFieldsInView(keyWindow, fields);
 
         if (fields.count == 1) {
-            // Single input field
             fields[0].text = otp;
             [[NSNotificationCenter defaultCenter] postNotificationName:UITextFieldTextDidChangeNotification object:fields[0]];
         } else if (fields.count >= 6) {
-            // 6 segmented individual boxes
             for (NSInteger i = 0; i < 6; i++) {
                 NSString *digit = [otp substringWithRange:NSMakeRange(i, 1)];
                 fields[i].text = digit;
@@ -200,6 +266,10 @@ static void onOTPReadyNotification(CFNotificationCenterRef center, void *observe
     autoFillOTP();
 }
 
+static void onInjectTurnstileNotification(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+    injectTurnstileToken();
+}
+
 %ctor {
     @autoreleasepool {
         CFNotificationCenterAddObserver(
@@ -216,6 +286,15 @@ static void onOTPReadyNotification(CFNotificationCenterRef center, void *observe
             NULL,
             onOTPReadyNotification,
             CFSTR("com.toriumbot.otp_ready"),
+            NULL,
+            CFNotificationSuspensionBehaviorDeliverImmediately
+        );
+
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            NULL,
+            onInjectTurnstileNotification,
+            CFSTR("com.toriumbot.inject_turnstile"),
             NULL,
             CFNotificationSuspensionBehaviorDeliverImmediately
         );

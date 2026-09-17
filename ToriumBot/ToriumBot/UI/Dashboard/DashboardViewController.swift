@@ -6,6 +6,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     private let headerContainer = UIView()
     private let titleLabel = UILabel()
     private let statusBadge = UILabel()
+    private let batteryBadge = UILabel()
     private let toggleButton = UIButton(type: .system)
 
     // Mode Switch Control (Eco vs Turbo)
@@ -67,8 +68,18 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         toggleButton.addTarget(self, action: #selector(toggleEngine), for: .touchUpInside)
         toggleButton.translatesAutoresizingMaskIntoConstraints = false
 
+        batteryBadge.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+        batteryBadge.layer.cornerRadius = 6
+        batteryBadge.clipsToBounds = true
+        batteryBadge.textAlignment = .center
+        batteryBadge.backgroundColor = ToriumTheme.cardBackground
+        batteryBadge.textColor = ToriumTheme.textSecondary
+        batteryBadge.translatesAutoresizingMaskIntoConstraints = false
+        UIDevice.current.isBatteryMonitoringEnabled = true
+
         headerContainer.addSubview(titleLabel)
         headerContainer.addSubview(statusBadge)
+        headerContainer.addSubview(batteryBadge)
         headerContainer.addSubview(toggleButton)
 
         NSLayoutConstraint.activate([
@@ -81,9 +92,14 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             titleLabel.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
 
             statusBadge.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
-            statusBadge.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 10),
+            statusBadge.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
             statusBadge.heightAnchor.constraint(equalToConstant: 22),
-            statusBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 68),
+            statusBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 64),
+
+            batteryBadge.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            batteryBadge.leadingAnchor.constraint(equalTo: statusBadge.trailingAnchor, constant: 6),
+            batteryBadge.heightAnchor.constraint(equalToConstant: 22),
+            batteryBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 54),
 
             toggleButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
             toggleButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
@@ -92,6 +108,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         ])
 
         updateEngineStatusUI()
+        updateBatteryStatusUI()
     }
 
     private func setupModeSwitch() {
@@ -241,6 +258,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             self?.loadData()
             self?.updateEngineStatusUI()
+            self?.updateBatteryStatusUI()
         }
     }
 
@@ -258,6 +276,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             MiningEngine.shared.start()
         }
         updateEngineStatusUI()
+        updateBatteryStatusUI()
     }
 
     private func updateEngineStatusUI() {
@@ -278,6 +297,24 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             toggleButton.setTitle("Chạy Bot", for: .normal)
             toggleButton.backgroundColor = ToriumTheme.accent.withAlphaComponent(0.2)
             toggleButton.setTitleColor(ToriumTheme.accent, for: .normal)
+        }
+    }
+
+    private func updateBatteryStatusUI() {
+        let level = UIDevice.current.batteryLevel
+        let state = UIDevice.current.batteryState
+
+        let percent = level >= 0 ? Int(level * 100) : 100
+        let isCharging = (state == .charging || state == .full)
+        let icon = isCharging ? "⚡" : "🔋"
+
+        batteryBadge.text = "\(icon) \(percent)%"
+        if percent <= 20 && !isCharging {
+            batteryBadge.textColor = ToriumTheme.error
+            batteryBadge.backgroundColor = ToriumTheme.error.withAlphaComponent(0.15)
+        } else {
+            batteryBadge.textColor = ToriumTheme.textSecondary
+            batteryBadge.backgroundColor = ToriumTheme.cardBackground
         }
     }
 

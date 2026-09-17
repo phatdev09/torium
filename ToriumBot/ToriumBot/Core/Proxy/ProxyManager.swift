@@ -112,4 +112,43 @@ public final class ProxyManager {
             return false
         }
     }
+
+    /// Pre-flight gatekeeper: checks if proxy can reach Cloudflare network and extracts real exit IP & country
+    public func verifyPreflightCloudflareTrace(for account: Account) async -> (alive: Bool, exitIP: String?, country: String?) {
+        guard let host = account.proxyHost, !host.isEmpty, account.proxyPort != nil else {
+            return (true, nil, nil)
+        }
+
+        let session = ProxyURLSession.createSession(account: account, timeoutInterval: 6.0)
+        guard let url = URL(string: "https://api.torium.network/cdn-cgi/trace") else {
+            let alive = await testSinglePing(account: account)
+            return (alive, nil, nil)
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.setValue("curl/7.88.1", forHTTPHeaderField: "User-Agent")
+
+        do {
+            let (data, response) = try await session.data(for: req)
+            if let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) {
+                let str = String(data: data, encoding: .utf8) ?? ""
+                var ip: String?
+                var loc: String?
+                for line in str.components(separatedBy: "\n") {
+                    let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.hasPrefix("ip=") {
+                        ip = String(trimmed.dropFirst(3))
+                    } else if trimmed.hasPrefix("loc=") {
+                        loc = String(trimmed.dropFirst(4))
+                    }
+                }
+                return (true, ip, loc)
+            }
+        } catch {
+            let fallbackAlive = await testSinglePing(account: account)
+            return (fallbackAlive, nil, nil)
+        }
+        return (false, nil, nil)
+    }
 }

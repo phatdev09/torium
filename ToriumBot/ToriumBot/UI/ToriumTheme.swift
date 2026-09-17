@@ -16,6 +16,12 @@ public struct ToriumTheme {
     public static let statusRed = UIColor(red: 235/255, green: 77/255, blue: 75/255, alpha: 1.0)
     public static let statusYellow = UIColor(red: 240/255, green: 178/255, blue: 50/255, alpha: 1.0)
 
+    // Aliases
+    public static let border = cardBorder
+    public static let success = statusGreen
+    public static let danger = statusRed
+    public static let warning = statusYellow
+
     // Corner Radius & Elevations
     public static let cornerRadius: CGFloat = 12.0
 

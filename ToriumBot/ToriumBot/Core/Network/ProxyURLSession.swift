@@ -47,12 +47,14 @@ public final class ProxyURLSession {
         var proxyDict: [AnyHashable: Any] = [:]
         let proto = (account.proxyProtocol ?? "socks5").lowercased()
 
+        let effectiveUser = getEffectiveUsername(for: account)
+
         if proto == "socks4" || proto == "socks5" || proto == "socks" {
             proxyDict[kCFStreamPropertySOCKSProxyHost as String] = host
             proxyDict[kCFStreamPropertySOCKSProxyPort as String] = port
             proxyDict[kCFStreamPropertySOCKSVersion as String] = (proto == "socks4") ? kCFStreamSocketSOCKSVersion4 : kCFStreamSocketSOCKSVersion5
 
-            if let user = account.proxyUsername, !user.isEmpty {
+            if let user = effectiveUser, !user.isEmpty {
                 proxyDict[kCFStreamPropertySOCKSUser as String] = user
             }
             if let pass = account.proxyPassword, !pass.isEmpty {
@@ -68,7 +70,7 @@ public final class ProxyURLSession {
             proxyDict["HTTPSProxy"] = host
             proxyDict["HTTPSPort"] = port
 
-            if let user = account.proxyUsername, !user.isEmpty {
+            if let user = effectiveUser, !user.isEmpty {
                 proxyDict[kCFProxyUsernameKey as String] = user
             }
             if let pass = account.proxyPassword, !pass.isEmpty {
@@ -79,5 +81,15 @@ public final class ProxyURLSession {
         configuration.connectionProxyDictionary = proxyDict
         let delegate = ProxyAuthDelegate(account: account)
         return URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
+    }
+
+    /// Generates sticky session username for rotating proxies (e.g. user_session-acc12_lifetime-30m)
+    public static func getEffectiveUsername(for account: Account) -> String? {
+        guard let user = account.proxyUsername, !user.isEmpty else { return nil }
+        if user.contains("session") { return user }
+        if let aid = account.id {
+            return "\(user)_session-acc\(aid)_lifetime-30m"
+        }
+        return user
     }
 }

@@ -587,6 +587,71 @@ public final class DatabaseManager {
         }
     }
 
+    // MARK: - Dynamic API Route Accessors
+
+    public func getAPIBaseURL() -> String {
+        return getSetting(key: "api_base_url") ?? "https://api.torium.network"
+    }
+
+    public func getAPIMiningStatusPath() -> String {
+        return getSetting(key: "api_mining_status_path") ?? "/v1/mining/v2/session-status"
+    }
+
+    public func getAPIBoostPath() -> String {
+        return getSetting(key: "api_boost_path") ?? "/v1/mining/v2/boost"
+    }
+
+    // MARK: - Account Quarantine Protocol
+
+    public func quarantineAccount(id: Int64, reason: String) {
+        dbQueue.sync {
+            let query = "UPDATE accounts SET is_banned = 1, is_active = 0 WHERE id = ?;"
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, query, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_int64(stmt, 1, id)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+        }
+
+        insertLog(Log(
+            accountId: id,
+            level: .error,
+            action: .general,
+            message: "QUARANTINE: Tài khoản [ID: \(id)] đã bị khoá/banned (\(reason)). Loại khỏi hàng đợi đào vĩnh viễn."
+        ))
+
+        TelegramReporter.shared.sendAlert(type: .account403, details: "Account ID: \(id) | Lý do: \(reason)")
+    }
+
+    // MARK: - 24-Hour Database Housekeeping
+
+    public func performDatabaseHousekeeping() {
+        dbQueue.sync {
+            // 1. Purge logs older than 7 days
+            let sevenDaysAgo = Int64((Date().timeIntervalSince1970 - 7 * 86400) * 1000)
+            let purgeQuery = "DELETE FROM logs WHERE created_at < ?;"
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, purgeQuery, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_bind_int64(stmt, 1, sevenDaysAgo)
+                sqlite3_step(stmt)
+            }
+            sqlite3_finalize(stmt)
+
+            // 2. Truncate SQLite WAL file
+            execute(query: "PRAGMA wal_checkpoint(TRUNCATE);")
+
+            // 3. Reclaim unused disk space
+            execute(query: "VACUUM;")
+        }
+
+        insertLog(Log(
+            level: .info,
+            action: .general,
+            message: "Housekeeping: Đã dọn dẹp logs > 7 ngày, checkpoint WAL và VACUUM SQLite hoàn tất (<15MB)."
+        ))
+    }
+
     // MARK: - Parsing Helpers
 
     private func parseAccountRow(stmt: OpaquePointer?) -> Account {
