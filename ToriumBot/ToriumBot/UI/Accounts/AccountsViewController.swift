@@ -2,8 +2,8 @@ import UIKit
 import UniformTypeIdentifiers
 
 /// Accounts Management Screen cleanly separated into:
-/// 1. "Tạo Mới (DongVanFB + OTP)" - Full registration pipeline with DongVanFB mail API & OTP
-/// 2. "Đăng Nhập / Import (Không OTP)" - Direct sign-in without OTP, auto Crane provisioning, and auto-run
+/// 1. "Tạo Mới (DongVanFB + OTP)" - Auto-generates password & account credentials, parses DongVanFB, receives OTP, and alerts Telegram
+/// 2. "Đăng Nhập / Import (Không OTP)" - Direct sign-in without OTP, format guide, auto Crane provisioning, and auto-run
 public final class AccountsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UIDocumentPickerDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
 
     private let scrollView = UIScrollView()
@@ -15,26 +15,49 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     // Form Container Stack (Collapses hidden section automatically without layout breakage)
     private let formContainerStack = UIStackView()
 
+    // =========================================================================
     // Section 1: Tạo Tài Khoản Mới (DongVanFB + OTP)
+    // =========================================================================
     private let registerContainer = UIView()
     private let regInfoLabel = UILabel()
-    private let regEmailField = UITextField()
-    private let regPasswordField = UITextField()
-    private let regDongVanField = UITextField()
-    private let regReferralField = UITextField()
+    private let regNoticeCard = UIView()
+    private let regNoticeLabel = UILabel()
+
+    private let regDongVanTitleLabel = UILabel()
+    private let regDongVanTextView = UITextView()
+    private let regDongVanPasteButton = UIButton(type: .system)
+
+    // Generator Preview Card
+    private let regGeneratorCard = UIView()
+    private let regPasswordPreviewLabel = UILabel()
+    private let regRegenPassButton = UIButton(type: .system)
+    private let regReferralPreviewLabel = UILabel()
+
     private let regProxyField = UITextField()
     private let regContainerPickerLabel = UILabel()
     private let regContainerPicker = UIPickerView()
     private let regSubmitButton = UIButton(type: .system)
+
     private let regStatusCard = UIView()
     private let regStatusDot = UIView()
     private let regStatusLabel = UILabel()
     private let regActivityIndicator = UIActivityIndicatorView(style: .medium)
 
+    private var currentGeneratedPassword = AccountGenerator.generateSecurePassword()
+
+    // =========================================================================
     // Section 2: Đăng Nhập / Import (Không Cần OTP - Tự Chạy)
+    // =========================================================================
     private let loginContainer = UIView()
     private let loginNoticeCard = UIView()
     private let loginNoticeLabel = UILabel()
+
+    // Format Guide Card
+    private let loginGuideCard = UIView()
+    private let loginGuideTitleLabel = UILabel()
+    private let loginGuideBodyLabel = UILabel()
+    private let loginSampleCopyButton = UIButton(type: .system)
+
     private let loginTextView = UITextView()
     private let loginButtonsStack = UIStackView()
     private let loginFilePickButton = UIButton(type: .system)
@@ -43,7 +66,9 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     private let loginProgressBar = UIProgressView(progressViewStyle: .default)
     private let loginProgressLabel = UILabel()
 
+    // =========================================================================
     // Section 3: Danh Sách Tài Khoản Đã Quản Lý
+    // =========================================================================
     private let tableSectionHeader = UIView()
     private let tableTitleLabel = UILabel()
     private let tableCountBadge = UILabel()
@@ -60,6 +85,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         view.backgroundColor = ToriumTheme.background
         navigationItem.title = "Quản Lý Accounts"
 
+        setupKeyboardDismissal()
         loadContainers()
         setupScrollView()
         setupSegmentControl()
@@ -67,12 +93,45 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         setupAccountsTableSection()
         loadAccounts()
         updateSegmentView()
+        updateGeneratorPreview()
     }
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadContainers()
         loadAccounts()
+        updateGeneratorPreview()
+    }
+
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        dismissKeyboard()
+    }
+
+    // MARK: - Keyboard Handling
+
+    private func setupKeyboardDismissal() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+
+        scrollView.keyboardDismissMode = .onDrag
+        accountsTableView.keyboardDismissMode = .onDrag
+    }
+
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
+    private func makeKeyboardToolbar() -> UIToolbar {
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        toolbar.barStyle = .black
+        toolbar.isTranslucent = true
+        let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let doneBtn = UIBarButtonItem(title: "✓ Đóng Bàn Phím", style: .done, target: self, action: #selector(dismissKeyboard))
+        doneBtn.tintColor = ToriumTheme.accentGold
+        toolbar.items = [flex, doneBtn]
+        return toolbar
     }
 
     private func loadContainers() {
@@ -120,7 +179,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         segmentControl.selectedSegmentIndex = 0
         segmentControl.selectedSegmentTintColor = ToriumTheme.accentGold
         segmentControl.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.systemFont(ofSize: 13, weight: .bold)], for: .selected)
-        segmentControl.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary, .font: UIFont.systemFont(ofSize: 13, weight: .semibold)], for: .normal)
+        segmentControl.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary, .font: UIFont.systemFont(ofSize: 13, weight: .medium)], for: .normal)
         segmentControl.backgroundColor = ToriumTheme.darkNavyCard
         segmentControl.addTarget(self, action: #selector(handleSegmentChanged), for: .valueChanged)
         segmentControl.translatesAutoresizingMaskIntoConstraints = false
@@ -166,13 +225,88 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regInfoLabel.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
         regInfoLabel.textColor = ToriumTheme.accentGold
 
-        styleTextField(regEmailField, placeholder: "Email mới (vd: user982@hotmail.com)")
-        styleTextField(regPasswordField, placeholder: "Mật khẩu cho tài khoản")
-        regPasswordField.isSecureTextEntry = true
+        // Notice Card: Auto generation information
+        regNoticeCard.backgroundColor = ToriumTheme.accentGold.withAlphaComponent(0.08)
+        regNoticeCard.layer.cornerRadius = 8
+        regNoticeCard.layer.borderWidth = 1
+        regNoticeCard.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.3).cgColor
+        regNoticeCard.translatesAutoresizingMaskIntoConstraints = false
 
-        styleTextField(regDongVanField, placeholder: "DongVanFB: refresh_token|client_id")
-        styleTextField(regReferralField, placeholder: "Mã giới thiệu (Mặc định: \(DatabaseManager.shared.getSetting(key: "master_referral_code") ?? "TORIUMVIP"))")
-        regReferralField.text = DatabaseManager.shared.getSetting(key: "master_referral_code")
+        regNoticeLabel.text = "🤖 TỰ ĐỘNG 100%: Bạn chỉ cần dán chuỗi DongVanFB. Hệ thống tự động tạo Mật khẩu an toàn, tự lấy Mã giới thiệu từ Cài đặt, tự tạo Crane Container và gửi thông báo qua Telegram khi hoàn tất!"
+        regNoticeLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+        regNoticeLabel.textColor = ToriumTheme.accentGold
+        regNoticeLabel.numberOfLines = 0
+        regNoticeLabel.translatesAutoresizingMaskIntoConstraints = false
+        regNoticeCard.addSubview(regNoticeLabel)
+
+        NSLayoutConstraint.activate([
+            regNoticeLabel.topAnchor.constraint(equalTo: regNoticeCard.topAnchor, constant: 8),
+            regNoticeLabel.leadingAnchor.constraint(equalTo: regNoticeCard.leadingAnchor, constant: 10),
+            regNoticeLabel.trailingAnchor.constraint(equalTo: regNoticeCard.trailingAnchor, constant: -10),
+            regNoticeLabel.bottomAnchor.constraint(equalTo: regNoticeCard.bottomAnchor, constant: -8)
+        ])
+
+        // DongVanFB Input Area
+        regDongVanTitleLabel.text = "CHUỖI DONGVANFB (EMAIL | REFRESH_TOKEN | CLIENT_ID | ...):"
+        regDongVanTitleLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        regDongVanTitleLabel.textColor = ToriumTheme.cyanHighlight
+
+        regDongVanTextView.backgroundColor = ToriumTheme.darkNavy
+        regDongVanTextView.textColor = ToriumTheme.textPrimary
+        regDongVanTextView.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        regDongVanTextView.layer.cornerRadius = 8
+        regDongVanTextView.layer.borderWidth = 1
+        regDongVanTextView.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        regDongVanTextView.heightAnchor.constraint(equalToConstant: 68).isActive = true
+        regDongVanTextView.inputAccessoryView = makeKeyboardToolbar()
+        regDongVanTextView.translatesAutoresizingMaskIntoConstraints = false
+
+        regDongVanPasteButton.setTitle("📋 Dán Từ Bộ Nhớ Tạm (Paste)", for: .normal)
+        regDongVanPasteButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        regDongVanPasteButton.setTitleColor(ToriumTheme.cyanHighlight, for: .normal)
+        regDongVanPasteButton.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.12)
+        regDongVanPasteButton.layer.cornerRadius = 6
+        regDongVanPasteButton.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        regDongVanPasteButton.addTarget(self, action: #selector(handlePasteDongVan), for: .touchUpInside)
+
+        // Generator Preview Card
+        regGeneratorCard.backgroundColor = ToriumTheme.darkNavy
+        regGeneratorCard.layer.cornerRadius = 8
+        regGeneratorCard.layer.borderWidth = 1
+        regGeneratorCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        regGeneratorCard.translatesAutoresizingMaskIntoConstraints = false
+
+        regPasswordPreviewLabel.font = UIFont.monospacedSystemFont(ofSize: 11, weight: .bold)
+        regPasswordPreviewLabel.textColor = ToriumTheme.miningGreen
+        regPasswordPreviewLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        regRegenPassButton.setTitle("🔄 Đổi Pass Khác", for: .normal)
+        regRegenPassButton.titleLabel?.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        regRegenPassButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
+        regRegenPassButton.addTarget(self, action: #selector(handleRegenPassword), for: .touchUpInside)
+        regRegenPassButton.translatesAutoresizingMaskIntoConstraints = false
+
+        regReferralPreviewLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+        regReferralPreviewLabel.textColor = ToriumTheme.textSecondary
+        regReferralPreviewLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        regGeneratorCard.addSubview(regPasswordPreviewLabel)
+        regGeneratorCard.addSubview(regRegenPassButton)
+        regGeneratorCard.addSubview(regReferralPreviewLabel)
+
+        NSLayoutConstraint.activate([
+            regPasswordPreviewLabel.topAnchor.constraint(equalTo: regGeneratorCard.topAnchor, constant: 8),
+            regPasswordPreviewLabel.leadingAnchor.constraint(equalTo: regGeneratorCard.leadingAnchor, constant: 10),
+            regPasswordPreviewLabel.trailingAnchor.constraint(lessThanOrEqualTo: regRegenPassButton.leadingAnchor, constant: -6),
+
+            regRegenPassButton.centerYAnchor.constraint(equalTo: regPasswordPreviewLabel.centerYAnchor),
+            regRegenPassButton.trailingAnchor.constraint(equalTo: regGeneratorCard.trailingAnchor, constant: -10),
+
+            regReferralPreviewLabel.topAnchor.constraint(equalTo: regPasswordPreviewLabel.bottomAnchor, constant: 4),
+            regReferralPreviewLabel.leadingAnchor.constraint(equalTo: regGeneratorCard.leadingAnchor, constant: 10),
+            regReferralPreviewLabel.trailingAnchor.constraint(equalTo: regGeneratorCard.trailingAnchor, constant: -10),
+            regReferralPreviewLabel.bottomAnchor.constraint(equalTo: regGeneratorCard.bottomAnchor, constant: -8)
+        ])
 
         styleTextField(regProxyField, placeholder: "Proxy (tùy chọn: host:port hoặc socks5://...)")
 
@@ -184,12 +318,12 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regContainerPicker.delegate = self
         regContainerPicker.heightAnchor.constraint(equalToConstant: 75).isActive = true
 
-        regSubmitButton.setTitle("🚀 BẮT ĐẦU ĐĂNG KÝ (TỰ GIẢI OTP DONGVAN)", for: .normal)
+        regSubmitButton.setTitle("✨ TỰ ĐỘNG TẠO TÀI KHOẢN & LẤY OTP DONGVAN", for: .normal)
         regSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .heavy)
         regSubmitButton.setTitleColor(UIColor.black, for: .normal)
         regSubmitButton.backgroundColor = ToriumTheme.accentGold
         regSubmitButton.layer.cornerRadius = 8
-        regSubmitButton.heightAnchor.constraint(equalToConstant: 42).isActive = true
+        regSubmitButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
         regSubmitButton.addTarget(self, action: #selector(handleStartRegister), for: .touchUpInside)
 
         // Status Card
@@ -202,7 +336,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regStatusDot.layer.cornerRadius = 3.5
         regStatusDot.translatesAutoresizingMaskIntoConstraints = false
 
-        regStatusLabel.text = "Sẵn sàng: Nhập thông tin DongVanFB để đăng ký tự động."
+        regStatusLabel.text = "Sẵn sàng: Dán chuỗi DongVanFB để hệ thống tự động xử lý toàn bộ."
         regStatusLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
         regStatusLabel.textColor = ToriumTheme.textSecondary
         regStatusLabel.numberOfLines = 2
@@ -233,10 +367,11 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
         let regStack = UIStackView(arrangedSubviews: [
             regInfoLabel,
-            regEmailField,
-            regPasswordField,
-            regDongVanField,
-            regReferralField,
+            regNoticeCard,
+            regDongVanTitleLabel,
+            regDongVanTextView,
+            regDongVanPasteButton,
+            regGeneratorCard,
             regProxyField,
             regContainerPickerLabel,
             regContainerPicker,
@@ -265,14 +400,14 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginContainer.layer.borderWidth = 1
         loginContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
 
-        // Notice Card explaining NO OTP needed for sign-in
+        // Notice Card
         loginNoticeCard.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.08)
         loginNoticeCard.layer.cornerRadius = 8
         loginNoticeCard.layer.borderWidth = 1
         loginNoticeCard.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.3).cgColor
         loginNoticeCard.translatesAutoresizingMaskIntoConstraints = false
 
-        loginNoticeLabel.text = "💡 ĐĂNG NHẬP KHÔNG CẦN OTP: Torium chỉ bắt OTP khi đăng ký mới. Khi đăng nhập, chỉ cần nhập email:mật khẩu (hoặc email|password|proxy). Hệ thống tự động gán Crane container, đăng nhập và kích hoạt cày ngay!"
+        loginNoticeLabel.text = "💡 ĐĂNG NHẬP KHÔNG CẦN OTP: Đăng nhập Torium không yêu cầu gửi mã OTP. Chỉ cần nhập danh sách tài khoản theo định dạng bên dưới, hệ thống tự động gán Container, đăng nhập và chạy ngay!"
         loginNoticeLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
         loginNoticeLabel.textColor = ToriumTheme.cyanHighlight
         loginNoticeLabel.numberOfLines = 0
@@ -286,14 +421,65 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
             loginNoticeLabel.bottomAnchor.constraint(equalTo: loginNoticeCard.bottomAnchor, constant: -8)
         ])
 
-        // Multi-line Text Area
+        // Format Guide Card
+        loginGuideCard.backgroundColor = ToriumTheme.darkNavy
+        loginGuideCard.layer.cornerRadius = 8
+        loginGuideCard.layer.borderWidth = 1
+        loginGuideCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        loginGuideCard.translatesAutoresizingMaskIntoConstraints = false
+
+        loginGuideTitleLabel.text = "📘 HƯỚNG DẪN ĐỊNH DẠNG IMPORT (MỖI DÒNG 1 TÀI KHOẢN):"
+        loginGuideTitleLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        loginGuideTitleLabel.textColor = ToriumTheme.accentGold
+        loginGuideTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        loginGuideBodyLabel.text = """
+        • Định dạng cơ bản: email:password
+        • Kèm proxy host/port: email:password:proxy_host:proxy_port
+        • Kèm proxy auth: email:password:proxy_host:proxy_port:user:pass
+        • Đầy đủ sao lưu: email|password|bearer_token|clerk_id|device_id
+        """
+        loginGuideBodyLabel.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        loginGuideBodyLabel.textColor = ToriumTheme.textSecondary
+        loginGuideBodyLabel.numberOfLines = 0
+        loginGuideBodyLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        loginSampleCopyButton.setTitle("📋 Sao Chép Định Dạng Mẫu", for: .normal)
+        loginSampleCopyButton.titleLabel?.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        loginSampleCopyButton.setTitleColor(ToriumTheme.cyanHighlight, for: .normal)
+        loginSampleCopyButton.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.12)
+        loginSampleCopyButton.layer.cornerRadius = 6
+        loginSampleCopyButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        loginSampleCopyButton.addTarget(self, action: #selector(handleCopySampleFormat), for: .touchUpInside)
+
+        loginGuideCard.addSubview(loginGuideTitleLabel)
+        loginGuideCard.addSubview(loginGuideBodyLabel)
+        loginGuideCard.addSubview(loginSampleCopyButton)
+
+        NSLayoutConstraint.activate([
+            loginGuideTitleLabel.topAnchor.constraint(equalTo: loginGuideCard.topAnchor, constant: 8),
+            loginGuideTitleLabel.leadingAnchor.constraint(equalTo: loginGuideCard.leadingAnchor, constant: 10),
+            loginGuideTitleLabel.trailingAnchor.constraint(equalTo: loginGuideCard.trailingAnchor, constant: -10),
+
+            loginGuideBodyLabel.topAnchor.constraint(equalTo: loginGuideTitleLabel.bottomAnchor, constant: 4),
+            loginGuideBodyLabel.leadingAnchor.constraint(equalTo: loginGuideCard.leadingAnchor, constant: 10),
+            loginGuideBodyLabel.trailingAnchor.constraint(equalTo: loginGuideCard.trailingAnchor, constant: -10),
+
+            loginSampleCopyButton.topAnchor.constraint(equalTo: loginGuideBodyLabel.bottomAnchor, constant: 6),
+            loginSampleCopyButton.leadingAnchor.constraint(equalTo: loginGuideCard.leadingAnchor, constant: 10),
+            loginSampleCopyButton.trailingAnchor.constraint(equalTo: loginGuideCard.trailingAnchor, constant: -10),
+            loginSampleCopyButton.bottomAnchor.constraint(equalTo: loginGuideCard.bottomAnchor, constant: -8)
+        ])
+
+        // Multi-line Text Area with accessory toolbar
         loginTextView.backgroundColor = ToriumTheme.darkNavy
         loginTextView.textColor = ToriumTheme.textPrimary
         loginTextView.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         loginTextView.layer.cornerRadius = 8
         loginTextView.layer.borderWidth = 1
         loginTextView.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
-        loginTextView.heightAnchor.constraint(equalToConstant: 110).isActive = true
+        loginTextView.heightAnchor.constraint(equalToConstant: 95).isActive = true
+        loginTextView.inputAccessoryView = makeKeyboardToolbar()
         loginTextView.translatesAutoresizingMaskIntoConstraints = false
 
         // Buttons
@@ -312,7 +498,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginFilePickButton.widthAnchor.constraint(equalToConstant: 95).isActive = true
         loginFilePickButton.addTarget(self, action: #selector(handlePickImportFile), for: .touchUpInside)
 
-        loginSubmitButton.setTitle("⚡ ĐĂNG NHẬP & BẬT ĐÀO NGAY (KHÔNG OTP)", for: .normal)
+        loginSubmitButton.setTitle("⚡ ĐĂNG NHẬP & BẬT ĐÀO NGAY", for: .normal)
         loginSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
         loginSubmitButton.setTitleColor(UIColor.black, for: .normal)
         loginSubmitButton.backgroundColor = ToriumTheme.miningGreen
@@ -329,7 +515,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginProgressCard.layer.borderWidth = 1
         loginProgressCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
 
-        loginProgressLabel.text = "Chờ nhập danh sách tài khoản cần đăng nhập."
+        loginProgressLabel.text = "Chờ nạp danh sách tài khoản cần đăng nhập."
         loginProgressLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
         loginProgressLabel.textColor = ToriumTheme.textSecondary
         loginProgressLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -358,6 +544,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
         let loginStack = UIStackView(arrangedSubviews: [
             loginNoticeCard,
+            loginGuideCard,
             loginTextView,
             loginButtonsStack,
             loginProgressCard
@@ -417,20 +604,22 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
             tableTitleLabel.centerYAnchor.constraint(equalTo: tableSectionHeader.centerYAnchor),
             tableTitleLabel.leadingAnchor.constraint(equalTo: tableSectionHeader.leadingAnchor),
+            tableTitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: tableCountBadge.leadingAnchor, constant: -8),
 
             tableCountBadge.centerYAnchor.constraint(equalTo: tableSectionHeader.centerYAnchor),
             tableCountBadge.trailingAnchor.constraint(equalTo: tableSectionHeader.trailingAnchor),
-            tableCountBadge.heightAnchor.constraint(equalToConstant: 18),
+            tableCountBadge.heightAnchor.constraint(equalToConstant: 20),
 
             accountsTableView.topAnchor.constraint(equalTo: tableSectionHeader.bottomAnchor, constant: 8),
-            accountsTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            accountsTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            accountsTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            accountsTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             accountsTableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
             heightConstraint
         ])
     }
 
     private func updateSegmentView() {
+        dismissKeyboard()
         let isRegisterMode = segmentControl.selectedSegmentIndex == 0
         registerContainer.isHidden = !isRegisterMode
         loginContainer.isHidden = isRegisterMode
@@ -440,30 +629,65 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         updateSegmentView()
     }
 
-    // MARK: - Action: Start Registration (DongVanFB + OTP)
+    private func updateGeneratorPreview() {
+        regPasswordPreviewLabel.text = "🎲 Mật khẩu tạo tự động: \(currentGeneratedPassword)"
+        let ref = DatabaseManager.shared.getSetting(key: "master_referral_code")
+        let displayRef = (ref?.isEmpty == false) ? ref! : "Chưa cài đặt"
+        regReferralPreviewLabel.text = "🎟️ Mã ref mặc định (từ Cài đặt): \(displayRef)"
+    }
+
+    @objc private func handleRegenPassword() {
+        currentGeneratedPassword = AccountGenerator.generateSecurePassword()
+        updateGeneratorPreview()
+    }
+
+    @objc private func handlePasteDongVan() {
+        if let pasteString = UIPasteboard.general.string {
+            regDongVanTextView.text = pasteString
+        }
+    }
+
+    @objc private func handleCopySampleFormat() {
+        let sample = """
+        user1@hotmail.com:Torium#Pass123!
+        user2@gmail.com:Torium#Pass456!:103.14.22.1:8080
+        """
+        UIPasteboard.general.string = sample
+        loginTextView.text = sample
+        showAlert(title: "Đã Sao Chép", message: "Đã sao chép và điền mẫu định dạng vào ô nhập tài khoản!")
+    }
+
+    // MARK: - Action: Start Registration (DongVanFB + Auto Gen Password + Master Ref)
 
     @objc private func handleStartRegister() {
-        guard let email = regEmailField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty,
-              let password = regPasswordField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !password.isEmpty else {
-            showAlert(title: "Thiếu thông tin", message: "Vui lòng nhập Email và Mật khẩu.")
+        dismissKeyboard()
+
+        guard let dvText = regDongVanTextView.text?.trimmingCharacters(in: .whitespacesAndNewlines), !dvText.isEmpty else {
+            showAlert(title: "Thiếu chuỗi DongVanFB", message: "Vui lòng dán chuỗi DongVanFB (chứa email và refresh_token) vào ô nhập.")
             return
         }
 
-        var cred: DongVanCredential?
-        if let dvText = regDongVanField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !dvText.isEmpty {
-            let combined = "\(email)|\(password)|\(dvText)"
-            cred = DongVanCredential(line: combined)
+        guard let cred = DongVanCredential(line: dvText) else {
+            showAlert(title: "Sai định dạng DongVanFB", message: "Chuỗi DongVanFB không hợp lệ. Cần tối thiểu email|refresh_token hoặc email|password|refresh_token|client_id.")
+            return
         }
+
+        let targetEmail = cred.email
+        let targetPassword = currentGeneratedPassword
+        let masterRef = DatabaseManager.shared.getSetting(key: "master_referral_code")
+        let proxyStr = regProxyField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         regSubmitButton.isEnabled = false
         regActivityIndicator.startAnimating()
-        regStatusLabel.text = "Đang bắt đầu đăng ký..."
+        regStatusLabel.text = "Đang khởi tạo tài khoản [\(targetEmail)]..."
 
         Task {
             do {
                 _ = try await AccountRegistrar.shared.startRegistration(
-                    email: email,
-                    password: password,
+                    email: targetEmail,
+                    password: targetPassword,
+                    referralCode: masterRef,
+                    proxyString: proxyStr,
                     credential: cred,
                     containerId: self.selectedContainerId,
                     onStepUpdate: { [weak self] step in
@@ -489,18 +713,22 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
                 DispatchQueue.main.async {
                     self.regActivityIndicator.stopAnimating()
                     self.regSubmitButton.isEnabled = true
-                    self.regStatusLabel.text = "✅ Đăng ký thành công! Token đã lưu vào hệ thống."
+                    self.regStatusLabel.text = "✅ Đăng ký thành công! Token đã lưu và gửi qua Telegram."
                     self.regStatusLabel.textColor = ToriumTheme.miningGreen
-                    self.regEmailField.text = ""
-                    self.regPasswordField.text = ""
-                    self.regDongVanField.text = ""
+                    self.regDongVanTextView.text = ""
+                    self.currentGeneratedPassword = AccountGenerator.generateSecurePassword()
+                    self.updateGeneratorPreview()
                     self.loadAccounts()
+                    self.showAlert(
+                        title: "Đăng Ký Thành Công!",
+                        message: "Tài khoản [\(targetEmail)] đã được tạo với mật khẩu: [\(targetPassword)]. Đã lưu vào CSDL và gửi thông báo qua Telegram!"
+                    )
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.regActivityIndicator.stopAnimating()
                     self.regSubmitButton.isEnabled = true
-                    self.regStatusLabel.text = "❌ Lỗi: \(error.localizedDescription)"
+                    self.regStatusLabel.text = "❌ Thất bại: \(error.localizedDescription)"
                     self.regStatusLabel.textColor = ToriumTheme.statusRed
                 }
             }
@@ -514,7 +742,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         case .openingContainer, .switchingContainer:
             regStatusLabel.text = "[1/6] Đang mở Crane container..."
         case .fillingForm, .fillingCredentials:
-            regStatusLabel.text = "[2/6] Đang điền form đăng ký..."
+            regStatusLabel.text = "[2/6] Đang tự động điền form (Mật khẩu tự tạo)..."
         case .waitingForCaptcha, .waitingForUserCaptcha:
             regStatusLabel.text = "[3/6] Chờ giải Cloudflare Turnstile..."
         case .fetchingOTP:
@@ -522,9 +750,9 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         case .submittingOTP:
             regStatusLabel.text = "[5/6] Đang tự động điền mã OTP..."
         case .extractingToken:
-            regStatusLabel.text = "[6/6] Đang trích xuất Bearer Token..."
+            regStatusLabel.text = "[6/6] Đang trích xuất Bearer Token & Lưu Telegram..."
         case .completed:
-            regStatusLabel.text = "✅ Hoàn tất đăng ký!"
+            regStatusLabel.text = "✅ Hoàn tất đăng ký & đã gửi Telegram!"
             regStatusLabel.textColor = ToriumTheme.miningGreen
         case .paused:
             regStatusLabel.text = "Đã tạm dừng"
@@ -537,6 +765,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     // MARK: - Action: Batch Sign-In / Import (No OTP Required)
 
     @objc private func handlePickImportFile() {
+        dismissKeyboard()
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.plainText], asCopy: true)
         picker.delegate = self
         picker.allowsMultipleSelection = false
@@ -552,6 +781,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     }
 
     @objc private func handleBatchLogin() {
+        dismissKeyboard()
         guard let text = loginTextView.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             showAlert(title: "Chưa có dữ liệu", message: "Vui lòng nhập hoặc nạp file danh sách account email:pass.")
             return
@@ -728,6 +958,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         let padding = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 38))
         tf.leftView = padding
         tf.leftViewMode = .always
+        tf.inputAccessoryView = makeKeyboardToolbar()
     }
 
     private func showAlert(title: String, message: String) {

@@ -155,26 +155,45 @@ public final class AccountRegistrar {
     public func startRegistration(
         email: String,
         password: String,
+        referralCode: String? = nil,
+        proxyString: String? = nil,
         credential: DongVanCredential?,
         containerId: String,
         onStepUpdate: @escaping (RegistrationStep) -> Void,
         onRequestCaptchaSolve: @escaping (@escaping () -> Void) -> Void
     ) async throws -> Account {
-        let newAccount = Account(
+        let masterRef = DatabaseManager.shared.getSetting(key: "master_referral_code")
+        let effectiveRef = (referralCode?.isEmpty == false) ? referralCode : ((masterRef?.isEmpty == false) ? masterRef : nil)
+
+        var newAccount = Account(
             email: email,
             password: password,
             containerId: containerId,
+            referralCode: effectiveRef,
             isActive: true
         )
+        if let proxyStr = proxyString, !proxyStr.isEmpty {
+            let parsed = ImportParser.shared.parseProxyString(proxyStr)
+            newAccount.proxyHost = parsed.host
+            newAccount.proxyPort = parsed.port
+            newAccount.proxyUsername = parsed.user
+            newAccount.proxyPassword = parsed.pass
+            newAccount.proxyProtocol = parsed.proto
+        }
+
         let insertedId = DatabaseManager.shared.insertAccount(newAccount)
-        var acc = newAccount
-        acc.id = insertedId
-        return try await registerAccount(
-            account: acc,
+        newAccount.id = insertedId
+        let completedAcc = try await registerAccount(
+            account: newAccount,
             credential: credential,
             onStepUpdate: onStepUpdate,
             onRequestCaptchaSolve: onRequestCaptchaSolve
         )
+
+        // Broadcast detailed Telegram alert
+        TelegramReporter.shared.alertNewAccountCreated(account: completedAcc, passwordGenerated: password)
+
+        return completedAcc
     }
 
     public func registerAccount(

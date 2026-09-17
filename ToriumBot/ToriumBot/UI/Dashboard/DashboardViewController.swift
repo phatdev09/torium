@@ -127,12 +127,16 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         brandTitleLabel.text = "⚡ TORIUM SYSTEM"
         brandTitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .black)
         brandTitleLabel.textColor = ToriumTheme.accentGold
+        brandTitleLabel.adjustsFontSizeToFitWidth = true
+        brandTitleLabel.minimumScaleFactor = 0.85
         brandTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         engineStatusBadge.font = UIFont.systemFont(ofSize: 10, weight: .black)
         engineStatusBadge.layer.cornerRadius = 5
         engineStatusBadge.clipsToBounds = true
         engineStatusBadge.textAlignment = .center
+        engineStatusBadge.adjustsFontSizeToFitWidth = true
+        engineStatusBadge.minimumScaleFactor = 0.8
         engineStatusBadge.translatesAutoresizingMaskIntoConstraints = false
 
         batteryBadge.font = UIFont.systemFont(ofSize: 10, weight: .bold)
@@ -141,6 +145,8 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         batteryBadge.textAlignment = .center
         batteryBadge.backgroundColor = ToriumTheme.darkNavy
         batteryBadge.textColor = ToriumTheme.textSecondary
+        batteryBadge.adjustsFontSizeToFitWidth = true
+        batteryBadge.minimumScaleFactor = 0.8
         batteryBadge.translatesAutoresizingMaskIntoConstraints = false
         UIDevice.current.isBatteryMonitoringEnabled = true
 
@@ -150,6 +156,8 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         hardwareProfileBadge.textAlignment = .center
         hardwareProfileBadge.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.15)
         hardwareProfileBadge.textColor = ToriumTheme.cyanHighlight
+        hardwareProfileBadge.adjustsFontSizeToFitWidth = true
+        hardwareProfileBadge.minimumScaleFactor = 0.8
         hardwareProfileBadge.text = DatabaseManager.shared.getSetting(key: "hardware_profile_name") ?? "A9 ECO"
         hardwareProfileBadge.translatesAutoresizingMaskIntoConstraints = false
 
@@ -159,6 +167,8 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         ramBadge.textAlignment = .center
         ramBadge.backgroundColor = ToriumTheme.darkNavy
         ramBadge.textColor = ToriumTheme.textMuted
+        ramBadge.adjustsFontSizeToFitWidth = true
+        ramBadge.minimumScaleFactor = 0.8
         ramBadge.text = "RAM: OK"
         ramBadge.translatesAutoresizingMaskIntoConstraints = false
 
@@ -277,7 +287,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             kpiGridStack.topAnchor.constraint(equalTo: tickerContainer.bottomAnchor, constant: 10),
             kpiGridStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             kpiGridStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            kpiGridStack.heightAnchor.constraint(equalToConstant: 165)
+            kpiGridStack.heightAnchor.constraint(equalToConstant: 182)
         ])
     }
 
@@ -288,6 +298,9 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         sectionTitleLabel.text = "DANH SÁCH CHI TIẾT TÀI KHOẢN & CONTAINER"
         sectionTitleLabel.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
         sectionTitleLabel.textColor = ToriumTheme.textPrimary
+        sectionTitleLabel.adjustsFontSizeToFitWidth = true
+        sectionTitleLabel.minimumScaleFactor = 0.8
+        sectionTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         sectionTitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         countPill.font = UIFont.systemFont(ofSize: 10, weight: .bold)
@@ -297,6 +310,8 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         countPill.clipsToBounds = true
         countPill.textAlignment = .center
         countPill.text = " 0 ACCOUNTS "
+        countPill.setContentCompressionResistancePriority(.required, for: .horizontal)
+        countPill.setContentHuggingPriority(.required, for: .horizontal)
         countPill.translatesAutoresizingMaskIntoConstraints = false
 
         sectionSubtitleLabel.text = "Quản lý chi tiết từng tài khoản kèm trạng thái Crane Container tương ứng"
@@ -337,6 +352,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
             sectionTitleLabel.topAnchor.constraint(equalTo: tableSectionHeader.topAnchor),
             sectionTitleLabel.leadingAnchor.constraint(equalTo: tableSectionHeader.leadingAnchor),
+            sectionTitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: countPill.leadingAnchor, constant: -8),
 
             countPill.centerYAnchor.constraint(equalTo: sectionTitleLabel.centerYAnchor),
             countPill.trailingAnchor.constraint(equalTo: tableSectionHeader.trailingAnchor),
@@ -368,6 +384,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
         var totalTor: Double = 0.0
         var totalAds: Int = 0
+        var totalBoostRate: Double = 0.0
         var activeAccountsCount = 0
         var errorCount = 0
         let containers = CraneManager.shared.fetchContainers()
@@ -377,6 +394,11 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
                 statsMap[id] = stats
                 totalTor += stats.torBalance
                 totalAds += stats.adsWatched
+                if acc.isActive && !acc.isBanned {
+                    totalBoostRate += (stats.boostRate > 0 ? stats.boostRate : 0.4)
+                }
+            } else if acc.isActive && !acc.isBanned {
+                totalBoostRate += 0.4
             }
             if acc.isActive && !acc.isBanned {
                 activeAccountsCount += 1
@@ -386,11 +408,10 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             }
         }
 
-        // Update KPI Cards
-        let hourlyRate = Double(activeAccountsCount) * 0.4
+        // Update KPI Cards: Dynamic boostRate sum of all active accounts/containers
         torMinedCard.update(
             main: String(format: "%.4f", totalTor),
-            sub: String(format: "Tốc độ: +%.2f TOR/h", hourlyRate)
+            sub: String(format: "Tốc độ: +%.3f TOR/h", totalBoostRate)
         )
 
         let runningInContainersCount = activeMiningIds.count
@@ -419,6 +440,8 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             tickerLabel.text = "[\(formatTime(latestLog.createdAt))] \(latestLog.message)"
         }
 
+        updateEngineStatusUI()
+        updateBatteryStatusUI()
         applyFilter()
     }
 
@@ -468,7 +491,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     private func updateEngineStatusUI() {
         let isRunning = MiningEngine.shared.isRunning
         if isRunning {
-            engineStatusBadge.text = " LIVE MINING "
+            engineStatusBadge.text = " 🟢 LIVE MINING "
             engineStatusBadge.backgroundColor = ToriumTheme.miningGreen.withAlphaComponent(0.2)
             engineStatusBadge.textColor = ToriumTheme.miningGreen
 
@@ -479,11 +502,11 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
             tickerDot.backgroundColor = ToriumTheme.miningGreen
         } else {
-            engineStatusBadge.text = " STANDBY "
-            engineStatusBadge.backgroundColor = ToriumTheme.warning.withAlphaComponent(0.2)
-            engineStatusBadge.textColor = ToriumTheme.warning
+            engineStatusBadge.text = " 🔴 DỪNG (IDLE) "
+            engineStatusBadge.backgroundColor = ToriumTheme.statusRed.withAlphaComponent(0.18)
+            engineStatusBadge.textColor = ToriumTheme.statusRed
 
-            masterToggleButton.setTitle("⚡ KÍCH HOẠT HỆ THỐNG ĐÀO", for: .normal)
+            masterToggleButton.setTitle("⚡ BẬT CÀY TOÀN HỆ THỐNG", for: .normal)
             masterToggleButton.backgroundColor = ToriumTheme.accentGold.withAlphaComponent(0.22)
             masterToggleButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
             masterToggleButton.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.6).cgColor
@@ -614,16 +637,22 @@ public final class ExecutiveKPICard: UIView {
         titleLabel.text = title
         titleLabel.font = UIFont.systemFont(ofSize: 10, weight: .bold)
         titleLabel.textColor = ToriumTheme.textMuted
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.8
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         mainValueLabel.text = mainValue
         mainValueLabel.font = UIFont.systemFont(ofSize: 18, weight: .heavy)
         mainValueLabel.textColor = ToriumTheme.textPrimary
+        mainValueLabel.adjustsFontSizeToFitWidth = true
+        mainValueLabel.minimumScaleFactor = 0.75
         mainValueLabel.translatesAutoresizingMaskIntoConstraints = false
 
         subValueLabel.text = subValue
         subValueLabel.font = UIFont.systemFont(ofSize: 10, weight: .regular)
         subValueLabel.textColor = accentColor
+        subValueLabel.adjustsFontSizeToFitWidth = true
+        subValueLabel.minimumScaleFactor = 0.75
         subValueLabel.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(iconImageView)

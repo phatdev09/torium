@@ -15,8 +15,8 @@ public class AppDelegate: UIResponder, UIApplicationDelegate {
         // Start heartbeat signaling for rootful Watchdog daemon
         WatchdogDaemon.shared.startHeartbeat()
 
-        // Automatically start MiningEngine if enabled in settings
-        let autoRestart = DatabaseManager.shared.getSetting(key: "auto_restart_enabled") ?? "true"
+        // Default: MiningEngine is IDLE until manually activated by user on Dashboard
+        let autoRestart = DatabaseManager.shared.getSetting(key: "auto_restart_enabled") ?? "false"
         if autoRestart == "true" {
             MiningEngine.shared.start()
         }

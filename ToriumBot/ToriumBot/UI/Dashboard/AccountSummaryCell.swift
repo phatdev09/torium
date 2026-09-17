@@ -59,11 +59,15 @@ public final class AccountSummaryCell: UITableViewCell {
         containerBadge.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.35).cgColor
         containerBadge.clipsToBounds = true
         containerBadge.textAlignment = .center
+        containerBadge.adjustsFontSizeToFitWidth = true
+        containerBadge.minimumScaleFactor = 0.75
 
         statusBadge.font = UIFont.systemFont(ofSize: 10, weight: .black)
         statusBadge.layer.cornerRadius = 5
         statusBadge.clipsToBounds = true
         statusBadge.textAlignment = .center
+        statusBadge.adjustsFontSizeToFitWidth = true
+        statusBadge.minimumScaleFactor = 0.75
 
         topRowStack.addArrangedSubview(containerBadge)
         topRowStack.addArrangedSubview(statusBadge)
@@ -158,6 +162,8 @@ public final class AccountSummaryCell: UITableViewCell {
         label.layer.cornerRadius = 4
         label.clipsToBounds = true
         label.textAlignment = .center
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.75
     }
 
     public func configure(with account: Account, stats: MiningStats?, isCurrentlyMining: Bool = false) {

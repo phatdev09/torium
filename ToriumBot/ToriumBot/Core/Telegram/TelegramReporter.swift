@@ -148,6 +148,24 @@ public final class TelegramReporter {
         Task { _ = await sendMessage(text: text) }
     }
 
+    public func alertNewAccountCreated(account: Account, passwordGenerated: String) {
+        let tokenSnippet = account.bearerToken.map { "\($0.prefix(25))..." } ?? "Chưa có"
+        let text = """
+        🎉 <b>[ToriumBot] TẠO TÀI KHOẢN MỚI THÀNH CÔNG!</b>
+        ━━━━━━━━━━━━━━━━━━━━
+        📧 <b>Email:</b> <code>\(account.email)</code>
+        🔑 <b>Mật khẩu:</b> <code>\(passwordGenerated)</code>
+        📦 <b>Crane Container:</b> <code>\(account.containerId ?? "default")</code>
+        🎟️ <b>Mã Ref:</b> <code>\(account.referralCode ?? "Không có")</code>
+        🌐 <b>Proxy:</b> <code>\(account.proxyString ?? "Kết nối trực tiếp")</code>
+        🔑 <b>Bearer Token:</b> <code>\(tokenSnippet)</code>
+        ⏰ <b>Thời gian:</b> \(currentUTC7String())
+        ━━━━━━━━━━━━━━━━━━━━
+        ✅ <i>Tài khoản đã được lưu vào bộ nhớ đệm CSDL hệ thống!</i>
+        """
+        Task { _ = await sendMessage(text: text) }
+    }
+
     public func alertAccountError(email: String, errorMessage: String) {
         let text = """
         🔴 [ToriumBot] Account bị lỗi

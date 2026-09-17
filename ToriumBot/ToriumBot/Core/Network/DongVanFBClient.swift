@@ -8,12 +8,63 @@ public struct DongVanCredential {
     public let clientId: String
 
     public init?(line: String) {
-        let parts = line.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        guard parts.count >= 4 else { return nil }
-        self.email = parts[0]
-        self.password = parts[1]
-        self.refreshToken = parts[2]
-        self.clientId = parts[3]
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        
+        if parts.count >= 4 {
+            self.email = parts[0]
+            self.password = parts[1]
+            self.refreshToken = parts[2]
+            self.clientId = parts[3]
+        } else if parts.count == 3 {
+            self.email = parts[0]
+            if parts[1].count > 40 {
+                // parts[1] is a long refresh token
+                self.password = ""
+                self.refreshToken = parts[1]
+                self.clientId = parts[2]
+            } else {
+                self.password = parts[1]
+                self.refreshToken = parts[2]
+                self.clientId = "e9a300d1-1e54-41ea-84f9-29b82100e65e"
+            }
+        } else if parts.count == 2 {
+            self.email = parts[0]
+            self.password = ""
+            self.refreshToken = parts[1]
+            self.clientId = "e9a300d1-1e54-41ea-84f9-29b82100e65e"
+        } else {
+            return nil
+        }
+    }
+}
+
+/// Advanced secure generator for Torium farming accounts and passwords
+public struct AccountGenerator {
+    private static let upperChars = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    private static let lowerChars = "abcdefghijkmnopqrstuvwxyz"
+    private static let digitChars = "23456789"
+    private static let specialChars = "!@#$%&*"
+
+    /// Generates a strong, compliant random password (e.g. Torium#7xK9pL2!)
+    public static func generateSecurePassword() -> String {
+        var result = "Torium#"
+        let allChars = upperChars + lowerChars + digitChars
+        for _ in 0..<8 {
+            if let randomChar = allChars.randomElement() {
+                result.append(randomChar)
+            }
+        }
+        result.append(specialChars.randomElement() ?? "!")
+        return result
+    }
+
+    /// Generates a clean random alphanumeric identifier
+    public static func generateRandomUsername() -> String {
+        let prefixes = ["tor", "miner", "node", "farm", "bot", "core"]
+        let prefix = prefixes.randomElement() ?? "tor"
+        let randomNum = Int.random(in: 10000...99999)
+        return "\(prefix)_\(randomNum)"
     }
 }
 
