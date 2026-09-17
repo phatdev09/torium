@@ -65,6 +65,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     private var allAccounts: [Account] = []
     private var filteredAccounts: [Account] = []
     private var statsMap: [Int64: MiningStats] = [:]
+    private var activeMiningIds: Set<Int64> = []
     private var refreshTimer: Timer?
 
     public override func viewDidLoad() {
@@ -167,39 +168,49 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         masterToggleButton.addTarget(self, action: #selector(toggleEngine), for: .touchUpInside)
         masterToggleButton.translatesAutoresizingMaskIntoConstraints = false
 
-        let topRow = UIStackView(arrangedSubviews: [brandTitleLabel, engineStatusBadge, batteryBadge, hardwareProfileBadge, ramBadge])
-        topRow.axis = .horizontal
-        topRow.spacing = 6
-        topRow.alignment = .center
-        topRow.translatesAutoresizingMaskIntoConstraints = false
+        let brandRow = UIStackView(arrangedSubviews: [brandTitleLabel, engineStatusBadge])
+        brandRow.axis = .horizontal
+        brandRow.distribution = .equalSpacing
+        brandRow.alignment = .center
+        brandRow.translatesAutoresizingMaskIntoConstraints = false
 
-        hudContainer.addSubview(topRow)
+        let metricsRow = UIStackView(arrangedSubviews: [hardwareProfileBadge, ramBadge, batteryBadge])
+        metricsRow.axis = .horizontal
+        metricsRow.distribution = .fillEqually
+        metricsRow.spacing = 6
+        metricsRow.alignment = .center
+        metricsRow.translatesAutoresizingMaskIntoConstraints = false
+
+        hudContainer.addSubview(brandRow)
+        hudContainer.addSubview(metricsRow)
         hudContainer.addSubview(masterToggleButton)
 
         NSLayoutConstraint.activate([
             hudContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
             hudContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             hudContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            hudContainer.heightAnchor.constraint(equalToConstant: 78),
+            hudContainer.heightAnchor.constraint(equalToConstant: 116),
 
-            topRow.topAnchor.constraint(equalTo: hudContainer.topAnchor, constant: 10),
-            topRow.leadingAnchor.constraint(equalTo: hudContainer.leadingAnchor, constant: 12),
-            topRow.trailingAnchor.constraint(lessThanOrEqualTo: hudContainer.trailingAnchor, constant: -12),
-            topRow.heightAnchor.constraint(equalToConstant: 22),
+            brandRow.topAnchor.constraint(equalTo: hudContainer.topAnchor, constant: 10),
+            brandRow.leadingAnchor.constraint(equalTo: hudContainer.leadingAnchor, constant: 12),
+            brandRow.trailingAnchor.constraint(equalTo: hudContainer.trailingAnchor, constant: -12),
+            brandRow.heightAnchor.constraint(equalToConstant: 22),
+
+            metricsRow.topAnchor.constraint(equalTo: brandRow.bottomAnchor, constant: 6),
+            metricsRow.leadingAnchor.constraint(equalTo: hudContainer.leadingAnchor, constant: 12),
+            metricsRow.trailingAnchor.constraint(equalTo: hudContainer.trailingAnchor, constant: -12),
+            metricsRow.heightAnchor.constraint(equalToConstant: 20),
 
             engineStatusBadge.heightAnchor.constraint(equalToConstant: 20),
-            engineStatusBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 64),
+            engineStatusBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            hardwareProfileBadge.heightAnchor.constraint(equalToConstant: 20),
+            ramBadge.heightAnchor.constraint(equalToConstant: 20),
             batteryBadge.heightAnchor.constraint(equalToConstant: 20),
-            batteryBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 52),
-            hardwareProfileBadge.heightAnchor.constraint(equalToConstant: 18),
-            hardwareProfileBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
-            ramBadge.heightAnchor.constraint(equalToConstant: 18),
-            ramBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 54),
 
             masterToggleButton.leadingAnchor.constraint(equalTo: hudContainer.leadingAnchor, constant: 12),
             masterToggleButton.trailingAnchor.constraint(equalTo: hudContainer.trailingAnchor, constant: -12),
-            masterToggleButton.bottomAnchor.constraint(equalTo: hudContainer.bottomAnchor, constant: -8),
-            masterToggleButton.heightAnchor.constraint(equalToConstant: 32)
+            masterToggleButton.bottomAnchor.constraint(equalTo: hudContainer.bottomAnchor, constant: -10),
+            masterToggleButton.heightAnchor.constraint(equalToConstant: 34)
         ])
 
         updateEngineStatusUI()
@@ -353,6 +364,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
     public func loadData() {
         allAccounts = DatabaseManager.shared.getAllAccounts()
+        activeMiningIds = MiningEngine.shared.getActiveAccountIds()
 
         var totalTor: Double = 0.0
         var totalAds: Int = 0
@@ -381,9 +393,10 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             sub: String(format: "Tốc độ: +%.2f TOR/h", hourlyRate)
         )
 
+        let runningInContainersCount = activeMiningIds.count
         activeContainersCard.update(
             main: "\(containers.count) Containers",
-            sub: "\(activeAccountsCount) account đang chạy"
+            sub: "\(runningInContainersCount) đang cày ngầm"
         )
 
         adsWatchedCard.update(
@@ -399,8 +412,10 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
         countPill.text = " \(allAccounts.count) ACCOUNTS "
 
-        // Update Activity Ticker with latest log
-        if let latestLog = DatabaseManager.shared.getRecentLogs(limit: 1).first {
+        // Update Activity Ticker with latest log or live mining status
+        if runningInContainersCount > 0 {
+            tickerLabel.text = "⚡ Đang cày song song \(runningInContainersCount) container trong background..."
+        } else if let latestLog = DatabaseManager.shared.getRecentLogs(limit: 1).first {
             tickerLabel.text = "[\(formatTime(latestLog.createdAt))] \(latestLog.message)"
         }
 
@@ -424,7 +439,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             filteredAccounts = allAccounts
         }
 
-        let cellHeight: CGFloat = 106.0
+        let cellHeight: CGFloat = 132.0
         let newTableHeight = max(1, CGFloat(filteredAccounts.count)) * cellHeight
         tableViewHeightConstraint?.constant = newTableHeight
 
@@ -520,12 +535,13 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         }
         let account = filteredAccounts[indexPath.row]
         let stats = account.id != nil ? statsMap[account.id!] : nil
-        cell.configure(with: account, stats: stats)
+        let isMining = account.id != nil && activeMiningIds.contains(account.id!)
+        cell.configure(with: account, stats: stats, isCurrentlyMining: isMining)
         return cell
     }
 
     public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 106.0
+        return 132.0
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -536,7 +552,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             preferredStyle: .actionSheet
         )
 
-        let toggleTitle = account.isActive ? "Tạm Dừng Account Này" : "Kích Hoạt Lại Account"
+        let toggleTitle = account.isActive ? "⏸ Tạm Dừng Account Này" : "▶️ Kích Hoạt Lại Account"
         actionSheet.addAction(UIAlertAction(title: toggleTitle, style: .default, handler: { [weak self] _ in
             var updated = account
             updated.isActive = !account.isActive
@@ -544,13 +560,20 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             self?.loadData()
         }))
 
-        actionSheet.addAction(UIAlertAction(title: "Mở Container Trong Torium", style: .default, handler: { _ in
+        actionSheet.addAction(UIAlertAction(title: "⚡ Cày Ngay Lập Tức (Force Mine)", style: .default, handler: { [weak self] _ in
+            if let id = account.id {
+                MiningEngine.shared.forceMineAccount(accountId: id)
+                self?.loadData()
+            }
+        }))
+
+        actionSheet.addAction(UIAlertAction(title: "📦 Mở Container Trong Torium", style: .default, handler: { _ in
             if let cId = account.containerId {
                 CraneManager.shared.switchAndLaunch(containerId: cId)
             }
         }))
 
-        actionSheet.addAction(UIAlertAction(title: "Chi Tiết Tài Khoản", style: .default, handler: { [weak self] _ in
+        actionSheet.addAction(UIAlertAction(title: "🔍 Chi Tiết Tài Khoản", style: .default, handler: { [weak self] _ in
             let detailVC = AccountDetailViewController(account: account)
             self?.navigationController?.pushViewController(detailVC, animated: true)
         }))

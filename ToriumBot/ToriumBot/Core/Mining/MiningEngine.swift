@@ -91,6 +91,51 @@ public final class MiningEngine {
         ))
     }
 
+    // MARK: - Active Account Query & Manual Trigger
+
+    /// Checks if a specific account is actively executing a mining task right now
+    public func isAccountMining(accountId: Int64) -> Bool {
+        tasksLock.lock()
+        defer { tasksLock.unlock() }
+        return activeTasks[accountId] != nil
+    }
+
+    /// Returns set of account IDs that are currently running background workers
+    public func getActiveAccountIds() -> Set<Int64> {
+        tasksLock.lock()
+        defer { tasksLock.unlock() }
+        return Set(activeTasks.keys)
+    }
+
+    /// Immediately forces a mining cycle (ad watch & checkin) for a specific account
+    public func forceMineAccount(accountId: Int64) {
+        guard let account = DatabaseManager.shared.getAccount(id: accountId), account.isActive, !account.isBanned else { return }
+        tasksLock.lock()
+        if activeTasks[accountId] != nil {
+            tasksLock.unlock()
+            return
+        }
+        tasksLock.unlock()
+
+        let offset = AntiSybilProfiler.shared.calculateUtcOffsetMinutes(for: account)
+        let todayDate = AntiSybilProfiler.shared.getLocalDateKey(offsetMinutes: offset)
+
+        let task = Task.detached(priority: .userInitiated) {
+            await WorkerPoolManager.shared.acquireWorkerSlot()
+            defer {
+                WorkerPoolManager.shared.releaseWorkerSlot()
+                self.tasksLock.lock()
+                self.activeTasks.removeValue(forKey: accountId)
+                self.tasksLock.unlock()
+            }
+            await self.processAccount(account: account, adDue: true, checkinDue: true, todayDate: todayDate)
+        }
+
+        tasksLock.lock()
+        activeTasks[accountId] = task
+        tasksLock.unlock()
+    }
+
     // MARK: - Account Evaluation Loop
 
     private var lastHousekeepingDate: String = ""

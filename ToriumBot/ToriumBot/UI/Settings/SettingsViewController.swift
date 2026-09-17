@@ -208,7 +208,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
 
         let sectionTitle = makeSectionTitle("TELEGRAM NOTIFICATIONS (SEND-ONLY)")
 
-        telegramGuideButton.setTitle("👉 Bấm vào đây để xem hướng dẫn", for: .normal)
+        telegramGuideButton.setTitle("Bấm vào đây để xem hướng dẫn", for: .normal)
         telegramGuideButton.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .bold)
         telegramGuideButton.setTitleColor(ToriumTheme.cyanHighlight, for: .normal)
         telegramGuideButton.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.12)

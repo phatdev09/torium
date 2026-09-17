@@ -12,6 +12,9 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     // Segmented Switcher
     private let segmentControl = UISegmentedControl(items: ["✨ Tạo Mới (DongVanFB)", "⚡ Đăng Nhập / Import"])
 
+    // Form Container Stack (Collapses hidden section automatically without layout breakage)
+    private let formContainerStack = UIStackView()
+
     // Section 1: Tạo Tài Khoản Mới (DongVanFB + OTP)
     private let registerContainer = UIView()
     private let regInfoLabel = UILabel()
@@ -60,8 +63,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loadContainers()
         setupScrollView()
         setupSegmentControl()
-        setupRegisterSection()
-        setupLoginSection()
+        setupFormSections()
         setupAccountsTableSection()
         loadAccounts()
         updateSegmentView()
@@ -132,6 +134,25 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         ])
     }
 
+    private func setupFormSections() {
+        formContainerStack.axis = .vertical
+        formContainerStack.spacing = 0
+        formContainerStack.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(formContainerStack)
+
+        setupRegisterSection()
+        setupLoginSection()
+
+        formContainerStack.addArrangedSubview(registerContainer)
+        formContainerStack.addArrangedSubview(loginContainer)
+
+        NSLayoutConstraint.activate([
+            formContainerStack.topAnchor.constraint(equalTo: segmentControl.bottomAnchor, constant: 12),
+            formContainerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            formContainerStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+        ])
+    }
+
     // MARK: - Section 1: Tạo Mới (DongVanFB + OTP)
 
     private func setupRegisterSection() {
@@ -140,7 +161,6 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         registerContainer.layer.cornerRadius = 14
         registerContainer.layer.borderWidth = 1
         registerContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
-        contentView.addSubview(registerContainer)
 
         regInfoLabel.text = "TẠO TÀI KHOẢN MỚI (DONGVANFB + OTP)"
         regInfoLabel.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
@@ -229,10 +249,6 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         registerContainer.addSubview(regStack)
 
         NSLayoutConstraint.activate([
-            registerContainer.topAnchor.constraint(equalTo: segmentControl.bottomAnchor, constant: 12),
-            registerContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            registerContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-
             regStack.topAnchor.constraint(equalTo: registerContainer.topAnchor, constant: 14),
             regStack.leadingAnchor.constraint(equalTo: registerContainer.leadingAnchor, constant: 14),
             regStack.trailingAnchor.constraint(equalTo: registerContainer.trailingAnchor, constant: -14),
@@ -248,7 +264,6 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginContainer.layer.cornerRadius = 14
         loginContainer.layer.borderWidth = 1
         loginContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
-        contentView.addSubview(loginContainer)
 
         // Notice Card explaining NO OTP needed for sign-in
         loginNoticeCard.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.08)
@@ -257,7 +272,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginNoticeCard.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.3).cgColor
         loginNoticeCard.translatesAutoresizingMaskIntoConstraints = false
 
-        loginNoticeLabel.text = "💡 ĐĂNG NHẬP KHÔNG CẦN OTP: Torium chỉ bắt OTP khi đăng ký mới. Khi đăng nhập, chỉ cần nhập email:mật khẩu. Hệ thống sẽ tự động gán Crane container, đăng nhập và kích hoạt đào ngay!"
+        loginNoticeLabel.text = "💡 ĐĂNG NHẬP KHÔNG CẦN OTP: Torium chỉ bắt OTP khi đăng ký mới. Khi đăng nhập, chỉ cần nhập email:mật khẩu (hoặc email|password|proxy). Hệ thống tự động gán Crane container, đăng nhập và kích hoạt cày ngay!"
         loginNoticeLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
         loginNoticeLabel.textColor = ToriumTheme.cyanHighlight
         loginNoticeLabel.numberOfLines = 0
@@ -353,10 +368,6 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginContainer.addSubview(loginStack)
 
         NSLayoutConstraint.activate([
-            loginContainer.topAnchor.constraint(equalTo: segmentControl.bottomAnchor, constant: 12),
-            loginContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            loginContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-
             loginStack.topAnchor.constraint(equalTo: loginContainer.topAnchor, constant: 14),
             loginStack.leadingAnchor.constraint(equalTo: loginContainer.leadingAnchor, constant: 14),
             loginStack.trailingAnchor.constraint(equalTo: loginContainer.trailingAnchor, constant: -14),
@@ -399,6 +410,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         self.tableViewHeightConstraint = heightConstraint
 
         NSLayoutConstraint.activate([
+            tableSectionHeader.topAnchor.constraint(equalTo: formContainerStack.bottomAnchor, constant: 16),
             tableSectionHeader.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             tableSectionHeader.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             tableSectionHeader.heightAnchor.constraint(equalToConstant: 24),
@@ -422,19 +434,6 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         let isRegisterMode = segmentControl.selectedSegmentIndex == 0
         registerContainer.isHidden = !isRegisterMode
         loginContainer.isHidden = isRegisterMode
-
-        // Re-anchor tableSectionHeader to whichever container is visible
-        tableSectionHeader.removeFromSuperview()
-        contentView.addSubview(tableSectionHeader)
-
-        let activeAnchor = isRegisterMode ? registerContainer.bottomAnchor : loginContainer.bottomAnchor
-
-        NSLayoutConstraint.activate([
-            tableSectionHeader.topAnchor.constraint(equalTo: activeAnchor, constant: 16),
-            tableSectionHeader.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            tableSectionHeader.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            tableSectionHeader.heightAnchor.constraint(equalToConstant: 24)
-        ])
     }
 
     @objc private func handleSegmentChanged() {
@@ -559,23 +558,54 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         }
 
         let result = ImportParser.shared.parseText(text)
-        guard result.totalValid > 0 else {
-            showAlert(title: "Không hợp lệ", message: "Không tìm thấy tài khoản hợp lệ nào trong văn bản đã nhập.")
+        let totalCandidates = result.validAccounts.count + result.duplicateAccounts.count
+        guard totalCandidates > 0 else {
+            showAlert(title: "Không tìm thấy tài khoản", message: "Không tìm thấy tài khoản hợp lệ nào trong nội dung đã nhập (định dạng email:mật khẩu).")
             return
         }
 
         loginSubmitButton.isEnabled = false
-        loginProgressLabel.text = "Đang khởi tạo \(result.totalValid) Crane containers..."
+        loginProgressLabel.text = "Đang xử lý \(totalCandidates) tài khoản..."
         loginProgressBar.progress = 0.05
 
-        // Commit valid accounts into database with auto Crane provisioning
-        _ = ImportParser.shared.commitImport(accounts: result.validAccounts, autoProvisionCrane: true)
+        // 1. Commit new valid accounts with auto Crane provisioning
+        if !result.validAccounts.isEmpty {
+            _ = ImportParser.shared.commitImport(accounts: result.validAccounts, autoProvisionCrane: true)
+        }
+
+        // 2. For duplicate / existing accounts, update password/proxy if provided and ensure container exists
+        let currentAccounts = DatabaseManager.shared.getAllAccounts()
+        for dup in result.duplicateAccounts {
+            if var existing = currentAccounts.first(where: { $0.email.lowercased() == dup.email.lowercased() }) {
+                var modified = false
+                if !dup.password.isEmpty && existing.password != dup.password {
+                    existing.password = dup.password
+                    modified = true
+                }
+                if let ph = dup.proxyHost, ph != existing.proxyHost {
+                    existing.proxyHost = ph
+                    existing.proxyPort = dup.proxyPort
+                    existing.proxyUsername = dup.proxyUsername
+                    existing.proxyPassword = dup.proxyPassword
+                    existing.proxyProtocol = dup.proxyProtocol
+                    modified = true
+                }
+                if existing.containerId == nil || existing.containerId?.isEmpty == true {
+                    let nextIdx = (existing.id.map(Int.init) ?? 1)
+                    existing.containerId = CraneManager.shared.provisionContainer(forEmail: existing.email, index: nextIdx)
+                    modified = true
+                }
+                if modified {
+                    DatabaseManager.shared.updateAccount(existing)
+                }
+            }
+        }
         loadAccounts()
 
-        // Gather the newly saved accounts
+        // 3. Collect all target accounts for sign-in
         let allCurrent = DatabaseManager.shared.getAllAccounts()
-        let validEmails = Set(result.validAccounts.map { $0.email.lowercased() })
-        let accountsToLogin = allCurrent.filter { validEmails.contains($0.email.lowercased()) }
+        let targetEmails = Set((result.validAccounts + result.duplicateAccounts).map { $0.email.lowercased() })
+        let accountsToLogin = allCurrent.filter { targetEmails.contains($0.email.lowercased()) }
 
         Task {
             var successCount = 0
@@ -611,7 +641,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
             DispatchQueue.main.async {
                 self.loginProgressBar.progress = 1.0
                 self.loginSubmitButton.isEnabled = true
-                self.loginProgressLabel.text = "🎉 Hoàn tất! Đăng nhập thành công: \(successCount) | Thất bại: \(failCount). Đã tự động kích hoạt đào."
+                self.loginProgressLabel.text = "🎉 Hoàn tất! Đăng nhập thành công: \(successCount) | Thất bại: \(failCount). Đã tự động kích hoạt cày ngầm."
                 self.loginTextView.text = ""
                 self.loadAccounts()
             }
