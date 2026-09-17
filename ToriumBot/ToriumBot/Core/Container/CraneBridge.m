@@ -24,9 +24,17 @@
     static id sCraneManager = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        void* handle = dlopen("/usr/lib/libcrane.dylib", RTLD_NOW);
-        if (!handle) {
-            handle = dlopen("/Library/MobileSubstrate/DynamicLibraries/libcrane.dylib", RTLD_NOW);
+        const char* candidatePaths[] = {
+            "/usr/lib/libcrane.dylib",
+            "/var/jb/usr/lib/libcrane.dylib",
+            "/Library/MobileSubstrate/DynamicLibraries/libcrane.dylib",
+            "/var/jb/Library/MobileSubstrate/DynamicLibraries/libcrane.dylib",
+            "/var/jb/Library/Frameworks/Crane.framework/Crane"
+        };
+        void* handle = NULL;
+        for (int i = 0; i < sizeof(candidatePaths)/sizeof(candidatePaths[0]); i++) {
+            handle = dlopen(candidatePaths[i], RTLD_NOW);
+            if (handle) break;
         }
         Class craneClass = NSClassFromString(@"CraneManager");
         if (craneClass && [craneClass respondsToSelector:@selector(sharedManager)]) {

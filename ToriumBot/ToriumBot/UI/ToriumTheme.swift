@@ -11,6 +11,14 @@ public struct ToriumTheme {
     public static let textSecondary = UIColor(white: 0.60, alpha: 1.0)
     public static let textMuted = UIColor(white: 0.40, alpha: 1.0)
 
+    // Official Torium App Colors (Matching Screenshots)
+    public static let miningGreen = UIColor(red: 0/255, green: 230/255, blue: 118/255, alpha: 1.0) // #00E676
+    public static let toriumYellow = UIColor(red: 255/255, green: 179/255, blue: 0/255, alpha: 1.0) // #FFB300
+    public static let darkNavy = UIColor(red: 9/255, green: 13/255, blue: 22/255, alpha: 1.0) // #090D16
+    public static let darkNavyCard = UIColor(red: 19/255, green: 27/255, blue: 42/255, alpha: 1.0) // #131B2A
+    public static let darkNavyBorder = UIColor(red: 31/255, green: 45/255, blue: 68/255, alpha: 1.0) // #1F2D44
+    public static let cyanHighlight = UIColor(red: 34/255, green: 211/255, blue: 238/255, alpha: 1.0) // #22D3EE for Hardware Scanner
+
     // Status Colors
     public static let statusGreen = UIColor(red: 46/255, green: 189/255, blue: 89/255, alpha: 1.0)
     public static let statusRed = UIColor(red: 235/255, green: 77/255, blue: 75/255, alpha: 1.0)
@@ -21,6 +29,8 @@ public struct ToriumTheme {
     public static let success = statusGreen
     public static let danger = statusRed
     public static let warning = statusYellow
+    public static let accent = accentGold
+    public static let error = statusRed
 
     // Corner Radius & Elevations
     public static let cornerRadius: CGFloat = 12.0

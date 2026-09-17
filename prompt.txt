@@ -212,3 +212,18 @@ Tweak hook `[NSURLSessionConfiguration defaultSessionConfiguration]` và `epheme
 
 ### 10. TGE Wallet Binding Policy (YAGNI Compliant)
 - Tuân thủ triệt để nguyên tắc YAGNI: Không xây dựng bộ sinh ví on-chain phỏng đoán trước khi Torium công bố mạng blockchain và hợp đồng chính thức. Người dùng liên kết ví thủ công khi có thông báo TGE.
+
+### 11. Universal iOS & All-iPhone Support Matrix (A9 to A18 Pro - Sept 2026)
+- Không giới hạn ở iPhone 6s/6s Plus mà mở rộng hỗ trợ **100% các dòng máy iPhone từ A9 đến A18 Pro** (iPhone 6s đến iPhone 16 Pro Max) trên tất cả các nền tảng Jailbreak tháng 9/2026:
+  - Checkm8 devices (A9–A11): palera1n Rootful / Rootless trên iOS 15.0–16.7.x.
+  - Arm64e devices (A12–A18 Pro): Dopamine 2.x, Fugu15, XinaA15, palera1n, và TrollStore trên iOS 15.0–16.6.1 / 17.0.
+- Dynamic Root Path Resolver: Tự động phân giải đường dẫn `/usr/lib/libcrane.dylib` (Rootful) và `/var/jb/usr/lib/libcrane.dylib` (Rootless) đảm bảo hook Crane luôn sẵn sàng.
+
+### 12. Startup Hardware Diagnostic & Auto-Optimization Engine
+- Màn hình khởi động `HardwareScannerViewController` tự động quét toàn diện thông số phần cứng trước khi vào app:
+  - Nhận diện chính xác tên máy (`iPhone8,1` -> iPhone 6s, `iPhone17,2` -> iPhone 16 Pro Max), vi xử lý SoC (A9 -> A18 Pro), số core CPU, tổng RAM vật lý, RAM khả dụng (`vm_statistics64`), dung lượng bộ nhớ trống, môi trường Rootful vs Rootless, trạng thái dylib Crane, nhiệt độ và pin.
+  - Tự động đưa ra và áp dụng Profile tối ưu hệ thống:
+    * **Profile ECO (RAM ≤ 2.5GB - A9/A10)**: 2–3 workers, jitter 45–70s, RAM cap 120MB, dọn dẹp cache gắt gao, chống tuyệt đối Jetsam memory kill.
+    * **Profile BALANCED (RAM 3–4.5GB - A11–A14)**: 6 workers, jitter 20–35s, RAM cap 280MB.
+    * **Profile TURBO EXTREME (RAM 6–8GB - A14 Pro đến A18 Pro)**: 15–25 workers, jitter 6–12s, RAM cap 650MB, cày siêu tốc cho farm máy cao cấp.
+- Giao diện Dashboard thiết kế chuẩn xác 100% theo bản app Torium gốc: Vòng tròn tiến độ đào Circular Gauge, số dư `+8.6898 TOR`, nút cuốc đào `0.704 TOR/h`, 5 vạch vàng Boost, biểu đồ Halving KỶ NGUYÊN 4 dạng bậc thang (3.2 -> 0.1 TOR/h).

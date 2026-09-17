@@ -27,7 +27,14 @@ public final class WorkerPoolManager {
         currentMode = WorkerMode(rawValue: modeStr) ?? .eco
 
         let maxStr = DatabaseManager.shared.getSetting(key: "max_concurrent_workers") ?? "3"
-        maxConcurrentWorkers = max(1, min(10, Int(maxStr) ?? 3))
+        maxConcurrentWorkers = max(1, min(30, Int(maxStr) ?? 3))
+    }
+
+    public func setMaxWorkers(_ count: Int) {
+        lock.lock()
+        maxConcurrentWorkers = max(1, min(30, count))
+        DatabaseManager.shared.setSetting(key: "max_concurrent_workers", value: "\(maxConcurrentWorkers)")
+        lock.unlock()
     }
 
     public func setMode(_ mode: WorkerMode) {

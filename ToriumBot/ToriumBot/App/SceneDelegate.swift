@@ -13,10 +13,10 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         let window = UIWindow(windowScene: windowScene)
         window.overrideUserInterfaceStyle = .dark
-        window.backgroundColor = ToriumTheme.background
+        window.backgroundColor = ToriumTheme.darkNavy
 
-        let mainTabBar = MainTabBarController()
-        window.rootViewController = mainTabBar
+        let scannerVC = HardwareScannerViewController()
+        window.rootViewController = scannerVC
         self.window = window
         window.makeKeyAndVisible()
     }
