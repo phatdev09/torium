@@ -177,10 +177,7 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
     private func setupSegmentControl() {
         segmentControl.selectedSegmentIndex = 0
-        segmentControl.selectedSegmentTintColor = ToriumTheme.accentGold
-        segmentControl.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.systemFont(ofSize: 13, weight: .bold)], for: .selected)
-        segmentControl.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary, .font: UIFont.systemFont(ofSize: 13, weight: .medium)], for: .normal)
-        segmentControl.backgroundColor = ToriumTheme.darkNavyCard
+        ToriumTheme.styleSegmentedControl(segmentControl)
         segmentControl.addTarget(self, action: #selector(handleSegmentChanged), for: .valueChanged)
         segmentControl.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(segmentControl)
@@ -216,17 +213,14 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
     private func setupRegisterSection() {
         registerContainer.translatesAutoresizingMaskIntoConstraints = false
-        registerContainer.backgroundColor = ToriumTheme.darkNavyCard
-        registerContainer.layer.cornerRadius = 14
-        registerContainer.layer.borderWidth = 1
-        registerContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        ToriumTheme.applyCardStyle(to: registerContainer, radius: ToriumTheme.radiusCard)
 
         regInfoLabel.text = "TẠO TÀI KHOẢN MỚI (DONGVANFB + OTP)"
         regInfoLabel.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
         regInfoLabel.textColor = ToriumTheme.accentGold
 
         // Notice Card: Auto generation information
-        regNoticeCard.backgroundColor = ToriumTheme.accentGold.withAlphaComponent(0.08)
+        regNoticeCard.backgroundColor = ToriumTheme.graphiteElevated
         regNoticeCard.layer.cornerRadius = 8
         regNoticeCard.layer.borderWidth = 1
         regNoticeCard.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.3).cgColor
@@ -251,12 +245,12 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regDongVanTitleLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
         regDongVanTitleLabel.textColor = ToriumTheme.cyanHighlight
 
-        regDongVanTextView.backgroundColor = ToriumTheme.darkNavy
+        regDongVanTextView.backgroundColor = ToriumTheme.graphiteElevated
         regDongVanTextView.textColor = ToriumTheme.textPrimary
         regDongVanTextView.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         regDongVanTextView.layer.cornerRadius = 8
         regDongVanTextView.layer.borderWidth = 1
-        regDongVanTextView.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        regDongVanTextView.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
         regDongVanTextView.heightAnchor.constraint(equalToConstant: 68).isActive = true
         regDongVanTextView.inputAccessoryView = makeKeyboardToolbar()
         regDongVanTextView.translatesAutoresizingMaskIntoConstraints = false
@@ -270,10 +264,10 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regDongVanPasteButton.addTarget(self, action: #selector(handlePasteDongVan), for: .touchUpInside)
 
         // Generator Preview Card
-        regGeneratorCard.backgroundColor = ToriumTheme.darkNavy
+        regGeneratorCard.backgroundColor = ToriumTheme.graphiteElevated
         regGeneratorCard.layer.cornerRadius = 8
         regGeneratorCard.layer.borderWidth = 1
-        regGeneratorCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        regGeneratorCard.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
         regGeneratorCard.translatesAutoresizingMaskIntoConstraints = false
 
         regPasswordPreviewLabel.font = UIFont.monospacedSystemFont(ofSize: 11, weight: .bold)
@@ -318,19 +312,19 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         regContainerPicker.delegate = self
         regContainerPicker.heightAnchor.constraint(equalToConstant: 75).isActive = true
 
-        regSubmitButton.setTitle("✨ TỰ ĐỘNG TẠO TÀI KHOẢN & LẤY OTP DONGVAN", for: .normal)
+        regSubmitButton.setTitle("🚀 BẮT ĐẦU ĐĂNG KÝ (TỰ GIẢI OTP DONGVAN)", for: .normal)
         regSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .heavy)
         regSubmitButton.setTitleColor(UIColor.black, for: .normal)
         regSubmitButton.backgroundColor = ToriumTheme.accentGold
-        regSubmitButton.layer.cornerRadius = 8
+        regSubmitButton.layer.cornerRadius = ToriumTheme.radiusInput
         regSubmitButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
         regSubmitButton.addTarget(self, action: #selector(handleStartRegister), for: .touchUpInside)
 
         // Status Card
-        regStatusCard.backgroundColor = ToriumTheme.darkNavy
+        regStatusCard.backgroundColor = ToriumTheme.graphiteElevated
         regStatusCard.layer.cornerRadius = 8
         regStatusCard.layer.borderWidth = 1
-        regStatusCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        regStatusCard.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
 
         regStatusDot.backgroundColor = ToriumTheme.miningGreen
         regStatusDot.layer.cornerRadius = 3.5
@@ -395,13 +389,10 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
 
     private func setupLoginSection() {
         loginContainer.translatesAutoresizingMaskIntoConstraints = false
-        loginContainer.backgroundColor = ToriumTheme.darkNavyCard
-        loginContainer.layer.cornerRadius = 14
-        loginContainer.layer.borderWidth = 1
-        loginContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        ToriumTheme.applyCardStyle(to: loginContainer, radius: ToriumTheme.radiusCard)
 
         // Notice Card
-        loginNoticeCard.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.08)
+        loginNoticeCard.backgroundColor = ToriumTheme.graphiteElevated
         loginNoticeCard.layer.cornerRadius = 8
         loginNoticeCard.layer.borderWidth = 1
         loginNoticeCard.layer.borderColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.3).cgColor
@@ -422,10 +413,10 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         ])
 
         // Format Guide Card
-        loginGuideCard.backgroundColor = ToriumTheme.darkNavy
+        loginGuideCard.backgroundColor = ToriumTheme.graphiteElevated
         loginGuideCard.layer.cornerRadius = 8
         loginGuideCard.layer.borderWidth = 1
-        loginGuideCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        loginGuideCard.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
         loginGuideCard.translatesAutoresizingMaskIntoConstraints = false
 
         loginGuideTitleLabel.text = "📘 HƯỚNG DẪN ĐỊNH DẠNG IMPORT (MỖI DÒNG 1 TÀI KHOẢN):"
@@ -472,12 +463,12 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         ])
 
         // Multi-line Text Area with accessory toolbar
-        loginTextView.backgroundColor = ToriumTheme.darkNavy
+        loginTextView.backgroundColor = ToriumTheme.graphiteElevated
         loginTextView.textColor = ToriumTheme.textPrimary
         loginTextView.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         loginTextView.layer.cornerRadius = 8
         loginTextView.layer.borderWidth = 1
-        loginTextView.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        loginTextView.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
         loginTextView.heightAnchor.constraint(equalToConstant: 95).isActive = true
         loginTextView.inputAccessoryView = makeKeyboardToolbar()
         loginTextView.translatesAutoresizingMaskIntoConstraints = false
@@ -498,11 +489,11 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginFilePickButton.widthAnchor.constraint(equalToConstant: 95).isActive = true
         loginFilePickButton.addTarget(self, action: #selector(handlePickImportFile), for: .touchUpInside)
 
-        loginSubmitButton.setTitle("⚡ ĐĂNG NHẬP & BẬT ĐÀO NGAY", for: .normal)
+        loginSubmitButton.setTitle("⚡ BẮT ĐẦU ĐĂNG NHẬP (KHÔNG CẦN OTP)", for: .normal)
         loginSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 12, weight: .heavy)
         loginSubmitButton.setTitleColor(UIColor.black, for: .normal)
-        loginSubmitButton.backgroundColor = ToriumTheme.miningGreen
-        loginSubmitButton.layer.cornerRadius = 8
+        loginSubmitButton.backgroundColor = ToriumTheme.accentGold
+        loginSubmitButton.layer.cornerRadius = ToriumTheme.radiusInput
         loginSubmitButton.heightAnchor.constraint(equalToConstant: 40).isActive = true
         loginSubmitButton.addTarget(self, action: #selector(handleBatchLogin), for: .touchUpInside)
 
@@ -510,10 +501,10 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginButtonsStack.addArrangedSubview(loginSubmitButton)
 
         // Progress Card
-        loginProgressCard.backgroundColor = ToriumTheme.darkNavy
+        loginProgressCard.backgroundColor = ToriumTheme.graphiteElevated
         loginProgressCard.layer.cornerRadius = 8
         loginProgressCard.layer.borderWidth = 1
-        loginProgressCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        loginProgressCard.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
 
         loginProgressLabel.text = "Chờ nạp danh sách tài khoản cần đăng nhập."
         loginProgressLabel.font = UIFont.systemFont(ofSize: 11, weight: .medium)
@@ -521,8 +512,8 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
         loginProgressLabel.translatesAutoresizingMaskIntoConstraints = false
 
         loginProgressBar.progress = 0.0
-        loginProgressBar.progressTintColor = ToriumTheme.miningGreen
-        loginProgressBar.trackTintColor = ToriumTheme.darkNavyBorder
+        loginProgressBar.progressTintColor = ToriumTheme.accentGold
+        loginProgressBar.trackTintColor = ToriumTheme.graphiteBorder
         loginProgressBar.layer.cornerRadius = 2
         loginProgressBar.clipsToBounds = true
         loginProgressBar.translatesAutoresizingMaskIntoConstraints = false
@@ -947,17 +938,12 @@ public final class AccountsViewController: UIViewController, UITableViewDataSour
     // MARK: - Helpers
 
     private func styleTextField(_ tf: UITextField, placeholder: String) {
-        tf.placeholder = placeholder
-        tf.font = UIFont.systemFont(ofSize: 13)
-        tf.textColor = ToriumTheme.textPrimary
-        tf.backgroundColor = ToriumTheme.darkNavy
-        tf.layer.cornerRadius = 8
-        tf.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
-        tf.layer.borderWidth = 1
-        tf.heightAnchor.constraint(equalToConstant: 38).isActive = true
-        let padding = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 38))
-        tf.leftView = padding
-        tf.leftViewMode = .always
+        ToriumTheme.applyInputStyle(to: tf)
+        tf.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [.foregroundColor: ToriumTheme.textMuted]
+        )
+        tf.heightAnchor.constraint(equalToConstant: 40).isActive = true
         tf.inputAccessoryView = makeKeyboardToolbar()
     }
 

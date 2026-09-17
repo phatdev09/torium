@@ -87,10 +87,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
 
     private func setupHeaderCard() {
         headerCard.translatesAutoresizingMaskIntoConstraints = false
-        headerCard.backgroundColor = ToriumTheme.darkNavyCard
-        headerCard.layer.cornerRadius = 14
-        headerCard.layer.borderWidth = 1
-        headerCard.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        ToriumTheme.applyCardStyle(to: headerCard, radius: ToriumTheme.radiusCard)
         contentView.addSubview(headerCard)
 
         headerLogoImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -162,6 +159,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         sleepLabel.textColor = ToriumTheme.textPrimary
         sleepLabel.numberOfLines = 2
 
+        sleepSimulatorSwitch.onTintColor = ToriumTheme.accentGold
         sleepRow.addArrangedSubview(sleepLabel)
         sleepRow.addArrangedSubview(sleepSimulatorSwitch)
 
@@ -190,10 +188,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
 
         let sectionTitle = makeSectionTitle("GIẢI CAPTCHA TURNSTILE")
 
-        captchaModeSegment.selectedSegmentTintColor = ToriumTheme.accentGold
-        captchaModeSegment.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.systemFont(ofSize: 12, weight: .semibold)], for: .selected)
-        captchaModeSegment.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary, .font: UIFont.systemFont(ofSize: 12, weight: .regular)], for: .normal)
-        captchaModeSegment.backgroundColor = ToriumTheme.background
+        ToriumTheme.styleSegmentedControl(captchaModeSegment)
         captchaModeSegment.addTarget(self, action: #selector(handleCaptchaModeChanged), for: .valueChanged)
 
         styleTextField(captchaApiKeyField, placeholder: "CapSolver API Key (Bắt buộc cho Auto Mode)")
@@ -232,6 +227,7 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
         delayLabel.text = "Human Delay (Giãn cách ngẫu nhiên):"
         delayLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
         delayLabel.textColor = ToriumTheme.textPrimary
+        humanDelaySwitch.onTintColor = ToriumTheme.accentGold
         delayRow.addArrangedSubview(delayLabel)
         delayRow.addArrangedSubview(humanDelaySwitch)
 
@@ -514,16 +510,11 @@ public final class SettingsViewController: UIViewController, UIPickerViewDataSou
     }
 
     private func styleTextField(_ tf: UITextField, placeholder: String) {
-        tf.placeholder = placeholder
-        tf.font = UIFont.systemFont(ofSize: 14)
-        tf.textColor = ToriumTheme.textPrimary
-        tf.backgroundColor = ToriumTheme.background
-        tf.layer.cornerRadius = 8
-        tf.layer.borderColor = ToriumTheme.border.cgColor
-        tf.layer.borderWidth = 1
-        tf.heightAnchor.constraint(equalToConstant: 38).isActive = true
-        let padding = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 38))
-        tf.leftView = padding
-        tf.leftViewMode = .always
+        ToriumTheme.applyInputStyle(to: tf)
+        tf.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [.foregroundColor: ToriumTheme.textMuted]
+        )
+        tf.heightAnchor.constraint(equalToConstant: 40).isActive = true
     }
 }

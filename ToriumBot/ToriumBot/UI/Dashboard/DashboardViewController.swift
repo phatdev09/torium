@@ -21,15 +21,10 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     private let tickerDot = UIView()
     private let tickerLabel = UILabel()
 
-    // 3. Executive KPI Cards (2x2 Grid)
-    private let kpiGridStack = UIStackView()
-    private let torMinedCard = ExecutiveKPICard(
-        title: "TỔNG TOR ĐÃ ĐÀO",
-        mainValue: "0.0000",
-        subValue: "Tốc độ: +0.00 TOR/h",
-        iconName: "bitcoinsign.circle.fill",
-        accentColor: ToriumTheme.accentGold
-    )
+    // 3. Circular Gauge Hero & Executive Stat Cards
+    private let circularGaugeCard = UIView()
+    private let circularGaugeView = CircularGaugeView()
+    private let statCardsStack = UIStackView()
     private let activeContainersCard = ExecutiveKPICard(
         title: "CRANE CONTAINERS",
         mainValue: "0 / 0",
@@ -75,12 +70,23 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         navigationItem.title = "Torium Command Center"
         navigationController?.navigationBar.prefersLargeTitles = false
 
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            image: UIImage(systemName: "gearshape.fill"),
+            style: .plain,
+            target: self,
+            action: #selector(handleOpenSettings)
+        )
+
         setupScrollView()
         setupHUD()
         setupActivityTicker()
         setupKPICards()
         setupTableSection()
         loadData()
+    }
+
+    @objc private func handleOpenSettings() {
+        tabBarController?.selectedIndex = 2
     }
 
     public override func viewWillAppear(_ animated: Bool) {
@@ -281,30 +287,50 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     }
 
     private func setupKPICards() {
-        kpiGridStack.axis = .vertical
-        kpiGridStack.spacing = 8
-        kpiGridStack.distribution = .fillEqually
-        kpiGridStack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(kpiGridStack)
+        // 1. Circular Gauge Hero Card
+        circularGaugeCard.translatesAutoresizingMaskIntoConstraints = false
+        ToriumTheme.applyCardStyle(to: circularGaugeCard, radius: ToriumTheme.radiusHero, hasGoldAccent: true)
+        contentView.addSubview(circularGaugeCard)
 
-        let row1 = UIStackView(arrangedSubviews: [torMinedCard, activeContainersCard])
-        row1.axis = .horizontal
-        row1.spacing = 8
-        row1.distribution = .fillEqually
-
-        let row2 = UIStackView(arrangedSubviews: [adsWatchedCard, systemHealthCard])
-        row2.axis = .horizontal
-        row2.spacing = 8
-        row2.distribution = .fillEqually
-
-        kpiGridStack.addArrangedSubview(row1)
-        kpiGridStack.addArrangedSubview(row2)
+        circularGaugeView.translatesAutoresizingMaskIntoConstraints = false
+        circularGaugeCard.addSubview(circularGaugeView)
 
         NSLayoutConstraint.activate([
-            kpiGridStack.topAnchor.constraint(equalTo: tickerContainer.bottomAnchor, constant: 10),
-            kpiGridStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            kpiGridStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            kpiGridStack.heightAnchor.constraint(equalToConstant: 182)
+            circularGaugeCard.topAnchor.constraint(equalTo: tickerContainer.bottomAnchor, constant: 10),
+            circularGaugeCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            circularGaugeCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            circularGaugeCard.heightAnchor.constraint(equalToConstant: 190),
+
+            circularGaugeView.topAnchor.constraint(equalTo: circularGaugeCard.topAnchor, constant: 8),
+            circularGaugeView.bottomAnchor.constraint(equalTo: circularGaugeCard.bottomAnchor, constant: -8),
+            circularGaugeView.centerXAnchor.constraint(equalTo: circularGaugeCard.centerXAnchor),
+            circularGaugeView.widthAnchor.constraint(equalTo: circularGaugeView.heightAnchor)
+        ])
+
+        // 2. 3 Key Stat Cards Stack (Container full row + Ads/Health 2-column row)
+        statCardsStack.axis = .vertical
+        statCardsStack.spacing = 8
+        statCardsStack.distribution = .fill
+        statCardsStack.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(statCardsStack)
+
+        activeContainersCard.translatesAutoresizingMaskIntoConstraints = false
+        activeContainersCard.heightAnchor.constraint(equalToConstant: 60).isActive = true
+
+        let subRow = UIStackView(arrangedSubviews: [adsWatchedCard, systemHealthCard])
+        subRow.axis = .horizontal
+        subRow.spacing = 8
+        subRow.distribution = .fillEqually
+        subRow.translatesAutoresizingMaskIntoConstraints = false
+        subRow.heightAnchor.constraint(equalToConstant: 68).isActive = true
+
+        statCardsStack.addArrangedSubview(activeContainersCard)
+        statCardsStack.addArrangedSubview(subRow)
+
+        NSLayoutConstraint.activate([
+            statCardsStack.topAnchor.constraint(equalTo: circularGaugeCard.bottomAnchor, constant: 10),
+            statCardsStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            statCardsStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
         ])
     }
 
@@ -338,10 +364,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
         // Filter segmented control
         filterSegmented.selectedSegmentIndex = 0
-        filterSegmented.selectedSegmentTintColor = ToriumTheme.accentGold
-        filterSegmented.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.systemFont(ofSize: 11, weight: .bold)], for: .selected)
-        filterSegmented.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary, .font: UIFont.systemFont(ofSize: 11, weight: .medium)], for: .normal)
-        filterSegmented.backgroundColor = ToriumTheme.darkNavyCard
+        ToriumTheme.styleSegmentedControl(filterSegmented)
         filterSegmented.addTarget(self, action: #selector(handleFilterChanged), for: .valueChanged)
         filterSegmented.translatesAutoresizingMaskIntoConstraints = false
 
@@ -363,7 +386,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
         self.tableViewHeightConstraint = heightConstraint
 
         NSLayoutConstraint.activate([
-            tableSectionHeader.topAnchor.constraint(equalTo: kpiGridStack.bottomAnchor, constant: 14),
+            tableSectionHeader.topAnchor.constraint(equalTo: statCardsStack.bottomAnchor, constant: 14),
             tableSectionHeader.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             tableSectionHeader.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
@@ -425,10 +448,12 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
             }
         }
 
-        // Update KPI Cards: Dynamic boostRate sum of all active accounts/containers
-        torMinedCard.update(
-            main: String(format: "%.4f", totalTor),
-            sub: String(format: "Tốc độ: +%.3f TOR/h", totalBoostRate)
+        // Update Circular Gauge: dynamic progress and speed
+        let progress = totalTor > 0 ? min(1.0, CGFloat(totalTor / 5.0)) : (activeAccountsCount > 0 ? 0.25 : 0.0)
+        circularGaugeView.update(
+            balance: String(format: "%.4f", totalTor),
+            speed: String(format: "Tốc độ: +%.3f TOR/h", totalBoostRate),
+            progress: progress
         )
 
         let runningInContainersCount = activeMiningIds.count
@@ -508,7 +533,7 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     private func updateEngineStatusUI() {
         let isRunning = MiningEngine.shared.isRunning
         if isRunning {
-            engineStatusBadge.text = " 🟢 LIVE MINING "
+            engineStatusBadge.text = " 🟢 LIVE "
             engineStatusBadge.backgroundColor = ToriumTheme.miningGreen.withAlphaComponent(0.2)
             engineStatusBadge.textColor = ToriumTheme.miningGreen
 
@@ -519,14 +544,14 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
 
             tickerDot.backgroundColor = ToriumTheme.miningGreen
         } else {
-            engineStatusBadge.text = " 🔴 DỪNG (IDLE) "
-            engineStatusBadge.backgroundColor = ToriumTheme.statusRed.withAlphaComponent(0.18)
-            engineStatusBadge.textColor = ToriumTheme.statusRed
+            engineStatusBadge.text = " ⏸ STANDBY "
+            engineStatusBadge.backgroundColor = ToriumTheme.textMuted.withAlphaComponent(0.18)
+            engineStatusBadge.textColor = ToriumTheme.textSecondary
 
-            masterToggleButton.setTitle("⚡ BẬT CÀY TOÀN HỆ THỐNG", for: .normal)
-            masterToggleButton.backgroundColor = ToriumTheme.accentGold.withAlphaComponent(0.22)
-            masterToggleButton.setTitleColor(ToriumTheme.accentGold, for: .normal)
-            masterToggleButton.layer.borderColor = ToriumTheme.accentGold.withAlphaComponent(0.6).cgColor
+            masterToggleButton.setTitle("⚡ KÍCH HOẠT HỆ THỐNG ĐÀO", for: .normal)
+            masterToggleButton.backgroundColor = ToriumTheme.accentGold
+            masterToggleButton.setTitleColor(UIColor.black, for: .normal)
+            masterToggleButton.layer.borderColor = ToriumTheme.accentGold.cgColor
 
             tickerDot.backgroundColor = ToriumTheme.warning
         }
@@ -623,6 +648,116 @@ public final class DashboardViewController: UIViewController, UITableViewDataSou
     }
 }
 
+// MARK: - Dedicated Circular Gauge Hero View
+
+public final class CircularGaugeView: UIView {
+    private let trackLayer = CAShapeLayer()
+    private let progressLayer = CAShapeLayer()
+    private let centerStack = UIStackView()
+    private let coinIconView = UIImageView()
+    private let titleLabel = UILabel()
+    private let balanceLabel = UILabel()
+    private let speedLabel = UILabel()
+
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupLayers()
+        setupContent()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupLayers()
+        setupContent()
+    }
+
+    private func setupLayers() {
+        backgroundColor = .clear
+
+        trackLayer.fillColor = UIColor.clear.cgColor
+        trackLayer.strokeColor = ToriumTheme.graphiteElevated.cgColor
+        trackLayer.lineWidth = 12.0
+        trackLayer.lineCap = .round
+        layer.addSublayer(trackLayer)
+
+        progressLayer.fillColor = UIColor.clear.cgColor
+        progressLayer.strokeColor = ToriumTheme.accentGold.cgColor
+        progressLayer.lineWidth = 12.0
+        progressLayer.lineCap = .round
+        progressLayer.strokeEnd = 0.0
+        layer.addSublayer(progressLayer)
+    }
+
+    private func setupContent() {
+        coinIconView.image = UIImage(systemName: "bitcoinsign.circle.fill")
+        coinIconView.tintColor = ToriumTheme.accentGold
+        coinIconView.contentMode = .scaleAspectFit
+        coinIconView.translatesAutoresizingMaskIntoConstraints = false
+        coinIconView.widthAnchor.constraint(equalToConstant: 24).isActive = true
+        coinIconView.heightAnchor.constraint(equalToConstant: 24).isActive = true
+
+        titleLabel.text = "TỔNG TOR ĐÃ ĐÀO"
+        titleLabel.font = UIFont.systemFont(ofSize: 10, weight: .heavy)
+        titleLabel.textColor = ToriumTheme.textSecondary
+        titleLabel.textAlignment = .center
+        titleLabel.adjustsFontSizeToFitWidth = true
+
+        balanceLabel.text = "0.0000"
+        balanceLabel.font = UIFont.monospacedSystemFont(ofSize: 30, weight: .black)
+        balanceLabel.textColor = ToriumTheme.textPrimary
+        balanceLabel.textAlignment = .center
+        balanceLabel.adjustsFontSizeToFitWidth = true
+        balanceLabel.minimumScaleFactor = 0.7
+
+        speedLabel.text = "Tốc độ: +0.000 TOR/h"
+        speedLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        speedLabel.textColor = ToriumTheme.accentGold
+        speedLabel.textAlignment = .center
+        speedLabel.adjustsFontSizeToFitWidth = true
+
+        centerStack.axis = .vertical
+        centerStack.alignment = .center
+        centerStack.spacing = 2
+        centerStack.translatesAutoresizingMaskIntoConstraints = false
+        centerStack.addArrangedSubview(coinIconView)
+        centerStack.addArrangedSubview(titleLabel)
+        centerStack.addArrangedSubview(balanceLabel)
+        centerStack.addArrangedSubview(speedLabel)
+
+        addSubview(centerStack)
+
+        NSLayoutConstraint.activate([
+            centerStack.centerXAnchor.constraint(equalTo: centerXAnchor),
+            centerStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            centerStack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 28),
+            centerStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -28)
+        ])
+    }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let radius = max(10, min(bounds.width, bounds.height) / 2 - 16)
+
+        // 270 degree arc from 135 deg (3*pi/4) to 405 deg (9*pi/4)
+        let startAngle: CGFloat = CGFloat.pi * 0.75
+        let endAngle: CGFloat = CGFloat.pi * 2.25
+
+        let path = UIBezierPath(arcCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+        trackLayer.path = path.cgPath
+        progressLayer.path = path.cgPath
+    }
+
+    public func update(balance: String, speed: String, progress: CGFloat) {
+        balanceLabel.text = balance
+        speedLabel.text = speed
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.35)
+        progressLayer.strokeEnd = max(0.0, min(1.0, progress))
+        CATransaction.commit()
+    }
+}
+
 // MARK: - Dedicated Executive KPI Card View
 
 public final class ExecutiveKPICard: UIView {
@@ -641,10 +776,7 @@ public final class ExecutiveKPICard: UIView {
     }
 
     private func setupView(title: String, mainValue: String, subValue: String, iconName: String, accentColor: UIColor) {
-        backgroundColor = ToriumTheme.darkNavyCard
-        layer.cornerRadius = 12
-        layer.borderWidth = 1
-        layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
+        ToriumTheme.applyCardStyle(to: self, radius: ToriumTheme.radiusCard)
 
         iconImageView.image = UIImage(systemName: iconName)
         iconImageView.tintColor = accentColor
@@ -652,21 +784,21 @@ public final class ExecutiveKPICard: UIView {
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.text = title
-        titleLabel.font = UIFont.systemFont(ofSize: 10, weight: .bold)
+        titleLabel.font = UIFont.systemFont(ofSize: 10, weight: .heavy)
         titleLabel.textColor = ToriumTheme.textMuted
         titleLabel.adjustsFontSizeToFitWidth = true
         titleLabel.minimumScaleFactor = 0.8
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         mainValueLabel.text = mainValue
-        mainValueLabel.font = UIFont.systemFont(ofSize: 18, weight: .heavy)
+        mainValueLabel.font = UIFont.systemFont(ofSize: 16, weight: .black)
         mainValueLabel.textColor = ToriumTheme.textPrimary
         mainValueLabel.adjustsFontSizeToFitWidth = true
         mainValueLabel.minimumScaleFactor = 0.75
         mainValueLabel.translatesAutoresizingMaskIntoConstraints = false
 
         subValueLabel.text = subValue
-        subValueLabel.font = UIFont.systemFont(ofSize: 10, weight: .regular)
+        subValueLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
         subValueLabel.textColor = accentColor
         subValueLabel.adjustsFontSizeToFitWidth = true
         subValueLabel.minimumScaleFactor = 0.75
@@ -687,7 +819,7 @@ public final class ExecutiveKPICard: UIView {
             titleLabel.leadingAnchor.constraint(equalTo: iconImageView.trailingAnchor, constant: 6),
             titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
 
-            mainValueLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 6),
+            mainValueLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 4),
             mainValueLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             mainValueLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
 

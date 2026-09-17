@@ -35,14 +35,7 @@ public final class AccountSummaryCell: UITableViewCell {
         selectionStyle = .none
 
         cardContainer.translatesAutoresizingMaskIntoConstraints = false
-        cardContainer.backgroundColor = ToriumTheme.darkNavyCard
-        cardContainer.layer.cornerRadius = 12
-        cardContainer.layer.borderWidth = 1
-        cardContainer.layer.borderColor = ToriumTheme.darkNavyBorder.cgColor
-        cardContainer.layer.shadowColor = UIColor.black.cgColor
-        cardContainer.layer.shadowOffset = CGSize(width: 0, height: 2)
-        cardContainer.layer.shadowRadius = 4
-        cardContainer.layer.shadowOpacity = 0.4
+        ToriumTheme.applyCardStyle(to: cardContainer, radius: ToriumTheme.radiusCard)
         contentView.addSubview(cardContainer)
 
         // Top Row: Container Badge (Left) + Status Badge (Right)

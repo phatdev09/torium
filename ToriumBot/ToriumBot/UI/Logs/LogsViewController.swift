@@ -1,6 +1,6 @@
 import UIKit
 
-/// Realtime logs viewer with filter tabs, color-coding, auto-scroll, and clear controls
+/// Cinematic Developer Console for Realtime Logs with filter tabs, color-coding, and clear controls
 public final class LogsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 
     private let filterSegment = UISegmentedControl(items: ["All", "INFO", "WARN", "ERROR"])
@@ -18,6 +18,7 @@ public final class LogsViewController: UIViewController, UITableViewDataSource, 
             target: self,
             action: #selector(handleClearLogs)
         )
+        navigationItem.rightBarButtonItem?.tintColor = ToriumTheme.accentGold
 
         setupSegment()
         setupTableView()
@@ -27,10 +28,7 @@ public final class LogsViewController: UIViewController, UITableViewDataSource, 
 
     private func setupSegment() {
         filterSegment.selectedSegmentIndex = 0
-        filterSegment.backgroundColor = ToriumTheme.cardBackground
-        filterSegment.selectedSegmentTintColor = ToriumTheme.accentGold
-        filterSegment.setTitleTextAttributes([.foregroundColor: UIColor.black, .font: UIFont.systemFont(ofSize: 13, weight: .bold)], for: .selected)
-        filterSegment.setTitleTextAttributes([.foregroundColor: ToriumTheme.textSecondary], for: .normal)
+        ToriumTheme.styleSegmentedControl(filterSegment)
         filterSegment.addTarget(self, action: #selector(filterChanged), for: .valueChanged)
         filterSegment.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(filterSegment)
@@ -39,16 +37,16 @@ public final class LogsViewController: UIViewController, UITableViewDataSource, 
             filterSegment.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             filterSegment.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             filterSegment.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            filterSegment.heightAnchor.constraint(equalToConstant: 32)
+            filterSegment.heightAnchor.constraint(equalToConstant: 34)
         ])
     }
 
     private func setupTableView() {
         tableView.backgroundColor = .clear
-        tableView.separatorColor = ToriumTheme.cardBorder
+        tableView.separatorStyle = .none
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "LogCell")
+        tableView.register(LogConsoleCell.self, forCellReuseIdentifier: LogConsoleCell.reuseIdentifier)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tableView)
 
@@ -109,41 +107,124 @@ public final class LogsViewController: UIViewController, UITableViewDataSource, 
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "LogCell", for: indexPath)
-        let log = logs[indexPath.row]
-
-        cell.backgroundColor = .clear
-        cell.selectionStyle = .none
-
-        let attributed = NSMutableAttributedString()
-
-        // Timestamp
-        let timeAttr = NSAttributedString(
-            string: "[\(log.formattedDate)] ",
-            attributes: [.foregroundColor: ToriumTheme.textMuted, .font: UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)]
-        )
-        attributed.append(timeAttr)
-
-        // Level Badge
-        var badgeColor = ToriumTheme.textPrimary
-        if log.level == .warn { badgeColor = ToriumTheme.statusYellow }
-        if log.level == .error { badgeColor = ToriumTheme.statusRed }
-
-        let levelAttr = NSAttributedString(
-            string: "[\(log.level.rawValue)] ",
-            attributes: [.foregroundColor: badgeColor, .font: UIFont.monospacedSystemFont(ofSize: 12, weight: .bold)]
-        )
-        attributed.append(levelAttr)
-
-        // Action & Message
-        let msgAttr = NSAttributedString(
-            string: "(\(log.action.rawValue)) \(log.message)",
-            attributes: [.foregroundColor: badgeColor, .font: UIFont.systemFont(ofSize: 13, weight: .regular)]
-        )
-        attributed.append(msgAttr)
-
-        cell.textLabel?.attributedText = attributed
-        cell.textLabel?.numberOfLines = 0
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: LogConsoleCell.reuseIdentifier, for: indexPath) as? LogConsoleCell else {
+            return UITableViewCell()
+        }
+        cell.configure(with: logs[indexPath.row])
         return cell
+    }
+}
+
+// MARK: - Dedicated Cinematic LogConsoleCell
+
+public final class LogConsoleCell: UITableViewCell {
+    public static let reuseIdentifier = "LogConsoleCell"
+
+    private let cardView = UIView()
+    private let statusDot = UIView()
+    private let timestampLabel = UILabel()
+    private let levelBadge = UILabel()
+    private let actionTagLabel = UILabel()
+    private let messageLabel = UILabel()
+
+    public override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupViews()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupViews() {
+        backgroundColor = .clear
+        selectionStyle = .none
+
+        cardView.translatesAutoresizingMaskIntoConstraints = false
+        cardView.backgroundColor = ToriumTheme.graphiteCard.withAlphaComponent(0.7)
+        cardView.layer.cornerRadius = 8
+        cardView.layer.borderWidth = 0.8
+        cardView.layer.borderColor = ToriumTheme.graphiteBorder.cgColor
+        contentView.addSubview(cardView)
+
+        statusDot.translatesAutoresizingMaskIntoConstraints = false
+        statusDot.layer.cornerRadius = 3
+        cardView.addSubview(statusDot)
+
+        timestampLabel.translatesAutoresizingMaskIntoConstraints = false
+        timestampLabel.font = UIFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        timestampLabel.textColor = ToriumTheme.textMuted
+        cardView.addSubview(timestampLabel)
+
+        levelBadge.translatesAutoresizingMaskIntoConstraints = false
+        levelBadge.font = UIFont.monospacedSystemFont(ofSize: 10, weight: .bold)
+        levelBadge.layer.cornerRadius = 4
+        levelBadge.clipsToBounds = true
+        levelBadge.textAlignment = .center
+        cardView.addSubview(levelBadge)
+
+        actionTagLabel.translatesAutoresizingMaskIntoConstraints = false
+        actionTagLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+        actionTagLabel.textColor = ToriumTheme.textSecondary
+        cardView.addSubview(actionTagLabel)
+
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        messageLabel.textColor = ToriumTheme.textPrimary
+        messageLabel.numberOfLines = 0
+        cardView.addSubview(messageLabel)
+
+        NSLayoutConstraint.activate([
+            cardView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 3),
+            cardView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -3),
+            cardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            cardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+
+            statusDot.centerYAnchor.constraint(equalTo: timestampLabel.centerYAnchor),
+            statusDot.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 10),
+            statusDot.widthAnchor.constraint(equalToConstant: 6),
+            statusDot.heightAnchor.constraint(equalToConstant: 6),
+
+            timestampLabel.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 8),
+            timestampLabel.leadingAnchor.constraint(equalTo: statusDot.trailingAnchor, constant: 6),
+
+            levelBadge.centerYAnchor.constraint(equalTo: timestampLabel.centerYAnchor),
+            levelBadge.leadingAnchor.constraint(equalTo: timestampLabel.trailingAnchor, constant: 6),
+            levelBadge.heightAnchor.constraint(equalToConstant: 16),
+            levelBadge.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+
+            actionTagLabel.centerYAnchor.constraint(equalTo: timestampLabel.centerYAnchor),
+            actionTagLabel.leadingAnchor.constraint(equalTo: levelBadge.trailingAnchor, constant: 6),
+            actionTagLabel.trailingAnchor.constraint(lessThanOrEqualTo: cardView.trailingAnchor, constant: -10),
+
+            messageLabel.topAnchor.constraint(equalTo: timestampLabel.bottomAnchor, constant: 5),
+            messageLabel.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 10),
+            messageLabel.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -10),
+            messageLabel.bottomAnchor.constraint(equalTo: cardView.bottomAnchor, constant: -8)
+        ])
+    }
+
+    public func configure(with log: Log) {
+        timestampLabel.text = "[\(log.formattedDate)]"
+        actionTagLabel.text = "(\(log.action.rawValue))"
+        messageLabel.text = log.message
+
+        switch log.level {
+        case .error:
+            statusDot.backgroundColor = ToriumTheme.statusRed
+            levelBadge.text = " ERROR "
+            levelBadge.textColor = ToriumTheme.statusRed
+            levelBadge.backgroundColor = ToriumTheme.statusRed.withAlphaComponent(0.15)
+        case .warn:
+            statusDot.backgroundColor = ToriumTheme.statusYellow
+            levelBadge.text = " WARN "
+            levelBadge.textColor = ToriumTheme.statusYellow
+            levelBadge.backgroundColor = ToriumTheme.statusYellow.withAlphaComponent(0.15)
+        case .info:
+            statusDot.backgroundColor = ToriumTheme.cyanHighlight
+            levelBadge.text = " INFO "
+            levelBadge.textColor = ToriumTheme.cyanHighlight
+            levelBadge.backgroundColor = ToriumTheme.cyanHighlight.withAlphaComponent(0.15)
+        }
     }
 }
